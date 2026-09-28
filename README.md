@@ -78,6 +78,8 @@ contest/
 ├── novel/                  # 同人小说 HTML 与封面
 ├── update/                 # 版本补丁日志 HTML
 ├── guide_assets/           # 操作指南资源
+├── deploy/
+│   └── nginx/              # 生产环境 nginx 站点配置
 └── ladder_project/         # 独立子工程：桌面版天梯客户端 / 服务端
     ├── client_app.py
     ├── server_app.py
@@ -159,7 +161,29 @@ pytest tests/ -v
 
 ---
 
-## 📌 数据库与数据安全
+## � 生产部署
+
+生产环境采用 **nginx 反向代理 + Uvicorn** 的经典组合：
+
+```
+客户端 ──HTTPS──> nginx (443) ──HTTP──> Uvicorn (127.0.0.1:8010)
+                    │
+                    └── 静态资源 / WebSocket 直转后端
+```
+
+| 文件 | 用途 |
+|------|------|
+| `deploy/nginx/coop.battlesc2.top.conf` | 线上站点 nginx 配置（HTTPS + HTTP/2 + WebSocket + 200MB 上传 + 长超时） |
+| `deploy/nginx/README.md` | nginx 部署步骤与要点说明 |
+| `deploy_update.sh` / `deploy_update.ps1` | 版本更新时把运行时数据（数据库、头像、replay 等）迁移到新版本目录 |
+
+**关键配置项**：`client_max_body_size 200m`（避免上传 413）、`/ws/` 单独 location 并关闭 `proxy_buffering`（保障实时推送）、`upstream keepalive`（复用后端连接）。
+
+> 证书与私钥不随仓库分发，请在服务器上自行签发并调整 `ssl_certificate` 路径。
+
+---
+
+## �📌 数据库与数据安全
 
 - 数据库文件 `contest.db` 采用 **WAL 模式**，在应用启动时自动建表并进行列级迁移（`ensure_column`），旧版本数据库可直接兼容升级。
 - 以下内容已在 `.gitignore` 中排除，**不会随仓库分发**：
