@@ -1,0 +1,132 @@
+{% if replay_view %}
+    <section class="prep-mode-card replay-series-card">
+        <div class="panel-header compact-header">
+            <div>
+                <p class="eyebrow">Replay 判定</p>
+                <h3>第 {{ replay_view.current_game_number }} 局上传</h3>
+            </div>
+            <span class="status-badge success">BO{{ replay_view.best_of }}</span>
+        </div>
+        <div class="score-duel replay-score-duel">
+            <div class="score-side">
+                <strong>{{ replay_view.player1_name }}</strong>
+                <span>{{ replay_view.player1_score }}</span>
+            </div>
+            <div class="score-side">
+                <strong>{{ replay_view.player2_name }}</strong>
+                <span>{{ replay_view.player2_score }}</span>
+            </div>
+        </div>
+        {% if replay_view.validation_error %}
+            <div class="alert alert-error">{{ replay_view.validation_error }}</div>
+        {% endif %}
+        {% if replay_view.can_upload and replay_show_upload_form and replay_match_id %}
+            <form method="post" action="/tournaments/{{ tournament.id }}/matches/{{ replay_match_id }}/replay" enctype="multipart/form-data" class="signup-form replay-upload-form">
+                <label>
+                    <span>上传第 {{ replay_view.current_game_number }} 局 replay</span>
+                    <input name="replay_file" type="file" accept=".SC2Replay,.sc2replay" required>
+                    <small class="field-hint">上传 replay 仅用于归档保存。胜负由双方投票判定。</small>
+                </label>
+                <div class="form-actions">
+                    <button class="primary-button" type="submit">上传并等待投票</button>
+                </div>
+            </form>
+            {% if replay_view.can_request_admin_skip %}
+                <form method="post" action="/tournaments/{{ tournament.id }}/matches/{{ replay_match_id }}/replay/skip" class="signup-form replay-upload-form">
+                    <input type="hidden" name="source_tab" value="{{ replay_source_tab if replay_source_tab is defined else 'my_matches' }}">
+                    <div class="form-actions">
+                        <button class="ghost-button" type="submit">临时跳过本局 replay，交由赛事管理员仲裁</button>
+                    </div>
+                    <p class="meta-text">用于当前 replay 无法读取或暂时无法上传的情况。跳过后会先开启下一局准备/BP，同时保留一个待赛事管理员裁定的小局。</p>
+                </form>
+            {% endif %}
+        {% elif replay_show_upload_form and not replay_view.manual_resolution_pending and not replay_view.awaiting_vote and replay_preparation_status != 'complete' %}
+            <p class="meta-text">当前需先完成双方准备或本局 BP，随后才可以上传 replay。</p>
+        {% endif %}
+        {% if replay_view.awaiting_vote %}
+            <article class="prep-game-card replay-manual-card is-current">
+                <div class="match-headline">
+                    <span>第 {{ replay_view.current_game_number }} 局等待双方投票</span>
+                </div>
+                <p class="meta-text">replay 已存档。请双方选择本局胜者。若投票一致则自动判定，不一致则触发管理员仲裁。</p>
+                {% if replay_view.current_votes %}
+                    <div class="prep-recent-list">
+                        {% for vid, vslot in replay_view.current_votes.items() %}
+                            <div class="prep-recent-item">
+                                <span>{{ replay_view.voter_names[vid] or vid }} — 已投票：{% if vslot == 'player1' %}{{ replay_view.player1_name }}{% else %}{{ replay_view.player2_name }}{% endif %} 胜</span>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+                {% if replay_view.can_vote %}
+                    <div class="prep-action-grid replay-manual-grid">
+                        {% for option in replay_view.manual_choice_options %}
+                            <form method="post" action="/tournaments/{{ tournament.id }}/matches/{{ replay_match_id }}/replay/vote">
+                                <input type="hidden" name="winner_slot" value="{{ option.value }}">
+                                <button class="ghost-button" type="submit">判定 {{ option.label }} 获胜</button>
+                            </form>
+                        {% endfor %}
+                    </div>
+                {% elif replay_view.awaiting_vote and not replay_view.can_vote %}
+                    <p class="meta-text">你已投票，等待对方投票中。</p>
+                {% endif %}
+            </article>
+        {% endif %}
+        {% if replay_view.manual_resolution_pending and replay_view.pending_manual_judgment %}
+            <article class="prep-game-card replay-manual-card is-current">
+                <div class="match-headline">
+                    <span>第 {{ replay_view.pending_manual_judgment.game_number }} 局待手动裁定</span>
+                    <span>{{ replay_view.pending_manual_judgment.filename }}</span>
+                </div>
+                <p class="meta-text">{{ replay_view.pending_manual_judgment.detail }}</p>
+                <p class="meta-text">上传者：{{ replay_view.pending_manual_judgment.uploader_name }}{% if replay_view.pending_manual_judgment.saved_path %} · {{ replay_view.pending_manual_judgment.saved_path }}{% endif %}</p>
+                {% if replay_view.can_choose_manual_winner and replay_match_id %}
+                    <div class="prep-action-grid replay-manual-grid">
+                        {% for option in replay_view.manual_choice_options %}
+                            <form method="post" action="/tournaments/{{ tournament.id }}/matches/{{ replay_match_id }}/replay/manual-result">
+                                <input type="hidden" name="winner_slot" value="{{ option.value }}">
+                                <button class="ghost-button" type="submit">手动判定 {{ option.label }} 获胜</button>
+                            </form>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </article>
+        {% endif %}
+        {% if replay_view.admin_resolution_pending and replay_view.pending_admin_judgment %}
+            <article class="prep-game-card replay-manual-card is-current">
+                <div class="match-headline">
+                    <span>第 {{ replay_view.pending_admin_judgment.game_number }} 局待管理员仲裁</span>
+                    <span>临时跳过 replay</span>
+                </div>
+                <p class="meta-text">{{ replay_view.pending_admin_judgment.detail }}</p>
+                <p class="meta-text">发起者：{{ replay_view.pending_admin_judgment.requested_by_name }}{% if replay_view.pending_admin_judgment.requested_at %} · {{ replay_view.pending_admin_judgment.requested_at }}{% endif %}</p>
+                {% if manager and replay_match_id %}
+                    <div class="prep-action-grid replay-manual-grid">
+                        {% for option in replay_view.manual_choice_options %}
+                            <form method="post" action="/tournaments/{{ tournament.id }}/matches/{{ replay_match_id }}/replay/admin-result">
+                                <input type="hidden" name="source_tab" value="{{ replay_source_tab if replay_source_tab is defined else 'bracket' }}">
+                                <input type="hidden" name="winner_slot" value="{{ option.value }}">
+                                <button class="ghost-button" type="submit">管理员判定 {{ option.label }} 获胜</button>
+                            </form>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </article>
+        {% endif %}
+        {% if replay_view.game_results %}
+            <div class="prep-recent-list replay-history-list">
+                {% for result in replay_view.game_results %}
+                    <div class="prep-recent-item replay-history-item">
+                        <strong>第 {{ result.game_number }} 局</strong>
+                        <span>胜者：{{ result.winner_name }}</span>
+                        <span>上传者：{{ result.uploader_name }}</span>
+                        <span>{{ result.filename }}</span>
+                        {% if result.saved_path %}
+                            <span>{{ result.saved_path }}</span>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    </section>
+{% endif %}

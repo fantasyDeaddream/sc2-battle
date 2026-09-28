@@ -1,0 +1,211 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<section class="form-header">
+    <div>
+        <p class="eyebrow">赛事设置</p>
+        <h1>比赛设置</h1>
+        <p class="muted-copy">填写赛事时间、赛制、管理员与基础信息。</p>
+    </div>
+    <a class="ghost-button" href="/dashboard">返回大厅</a>
+</section>
+
+<section class="surface-card form-card">
+    {% if form_error %}
+        <div class="alert alert-error">{{ form_error }}</div>
+    {% endif %}
+    <form method="post" action="/tournaments" class="tournament-form">
+        <div class="form-grid two-columns">
+            <label>
+                <span>赛事名称</span>
+                <input name="name" type="text" value="{{ form_values.name or '' }}" placeholder="例如：春季公开赛" required>
+            </label>
+            <label>
+                <span>共享赛事管理员</span>
+                <input name="shared_admins" type="text" value="{{ form_values.shared_admins or '' }}" list="usernames" placeholder="输入账号，多个用逗号分隔">
+                <datalist id="usernames">
+                    {% for username in user_suggestions %}
+                        <option value="{{ username }}"></option>
+                    {% endfor %}
+                </datalist>
+            </label>
+            <label>
+                <span>比赛时间（{{ tz_label }}）</span>
+                <input name="start_time" type="datetime-local" value="{{ form_values.start_time or '' }}" required>
+            </label>
+            <label>
+                <span>签到时间（{{ tz_label }}）</span>
+                <input name="checkin_time" type="datetime-local" value="{{ form_values.checkin_time or '' }}" required>
+            </label>
+            <label>
+                <span>比赛赛制</span>
+                <select name="format_type" required>
+                    <option value="single_elimination" {% if (form_values.format_type or 'single_elimination') == 'single_elimination' %}selected{% endif %}>单败淘汰赛</option>
+                    <option value="double_elimination" {% if form_values.format_type == 'double_elimination' %}selected{% endif %}>双败淘汰赛</option>
+                    <option value="swiss" {% if form_values.format_type == 'swiss' %}selected{% endif %}>瑞士轮</option>
+                    <option value="round_robin" {% if form_values.format_type == 'round_robin' %}selected{% endif %}>循环赛</option>
+                </select>
+            </label>
+            <label>
+                <span>赛段设置</span>
+                <select name="stage_mode" required>
+                    <option value="single_stage" {% if (form_values.stage_mode or 'single_stage') == 'single_stage' %}selected{% endif %}>单阶段赛</option>
+                    <option value="double_stage" {% if form_values.stage_mode == 'double_stage' %}selected{% endif %}>双阶段赛</option>
+                </select>
+            </label>
+            <label>
+                <span>第二阶段赛制</span>
+                <select name="stage2_format_type">
+                    <option value="">单阶段赛可留空</option>
+                    <option value="single_elimination" {% if form_values.stage2_format_type == 'single_elimination' %}selected{% endif %}>单败淘汰赛</option>
+                    <option value="double_elimination" {% if form_values.stage2_format_type == 'double_elimination' %}selected{% endif %}>双败淘汰赛</option>
+                    <option value="swiss" {% if form_values.stage2_format_type == 'swiss' %}selected{% endif %}>瑞士轮</option>
+                    <option value="round_robin" {% if form_values.stage2_format_type == 'round_robin' %}selected{% endif %}>循环赛</option>
+                </select>
+                <small class="field-hint">仅在双阶段赛中生效。第一阶段使用上方“比赛赛制”，第二阶段使用这里的赛制。</small>
+            </label>
+            <div class="form-visibility-group" data-format-visibility="round_robin" {% if not show_round_robin_settings %}hidden{% endif %}>
+                <label>
+                    <span>循环轮数</span>
+                    <input name="round_robin_cycles" type="number" min="1" max="10" value="{{ form_values.round_robin_cycles }}" required>
+                    <small class="field-hint">仅循环赛阶段生效。设置为 2 表示完整循环复制一次，每名选手与其他人交手两次。</small>
+                </label>
+                <label>
+                    <span>循环赛胜场积分</span>
+                    <input name="round_robin_win_points" type="number" min="-100" max="100" value="{{ form_values.round_robin_win_points }}" required>
+                </label>
+                <label>
+                    <span>循环赛平局积分</span>
+                    <input name="round_robin_draw_points" type="number" min="-100" max="100" value="{{ form_values.round_robin_draw_points }}" required>
+                </label>
+                <label>
+                    <span>循环赛负场积分</span>
+                    <input name="round_robin_loss_points" type="number" min="-100" max="100" value="{{ form_values.round_robin_loss_points }}" required>
+                </label>
+                <label>
+                    <span>循环赛全局 BO</span>
+                    <select name="round_robin_best_of">
+                        {% for option in best_of_options_for_bracket('round_robin') %}
+                            <option value="{{ option }}" {% if option == form_values.round_robin_best_of %}selected{% endif %}>BO{{ option }}</option>
+                        {% endfor %}
+                    </select>
+                    <small class="field-hint">仅循环赛阶段生效。所有循环赛轮次和对局统一使用这个 BO。</small>
+                </label>
+            </div>
+            <div class="form-visibility-group" data-format-visibility="swiss" {% if not show_swiss_settings %}hidden{% endif %}>
+                <label>
+                    <span>瑞士轮常规局 BO</span>
+                    <select name="swiss_regular_best_of">
+                        {% for option in match_best_of_options %}
+                            <option value="{{ option }}" {% if option == form_values.swiss_regular_best_of %}selected{% endif %}>BO{{ option }}</option>
+                        {% endfor %}
+                    </select>
+                    <small class="field-hint">仅瑞士轮阶段生效。普通对局使用这个 BO。</small>
+                </label>
+                <label>
+                    <span>瑞士轮生死局 BO</span>
+                    <select name="swiss_decider_best_of">
+                        {% for option in match_best_of_options %}
+                            <option value="{{ option }}" {% if option == form_values.swiss_decider_best_of %}selected{% endif %}>BO{{ option }}</option>
+                        {% endfor %}
+                    </select>
+                    <small class="field-hint">仅瑞士轮阶段生效。晋级局或淘汰局会自动使用这个 BO。</small>
+                </label>
+            </div>
+            <label>
+                <span>BP 模式</span>
+                <select name="bp_mode">
+                    <option value="none" {% if (form_values.bp_mode or 'none') == 'none' %}selected{% endif %}>不启用 BP</option>
+                    <option value="map_pool" {% if form_values.bp_mode == 'map_pool' %}selected{% endif %}>地图池 BP</option>
+                    <option value="commander_draft" {% if form_values.bp_mode == 'commander_draft' %}selected{% endif %}>随机地图 + 指挥官 BP</option>
+                    <option value="commander_conquest_1v1" {% if form_values.bp_mode == 'commander_conquest_1v1' %}selected{% endif %}>指挥官1v1征服者</option>
+                    <option value="commander_conquest_2v2" {% if form_values.bp_mode == 'commander_conquest_2v2' %}selected{% endif %}>指挥官2v2征服者</option>
+                    <option value="ladder_1v1_bp" {% if form_values.bp_mode == 'ladder_1v1_bp' %}selected{% endif %}>天梯 1v1 BP</option>
+                    <option value="evo_bp" {% if form_values.bp_mode == 'evo_bp' %}selected{% endif %}>EVO BP</option>
+                </select>
+                <small class="field-hint">地图池 BP 使用固定 9 图序列；随机地图 + 指挥官 BP 会在每个小局前重新执行；指挥官1v1征服者会默认以 BO5 初始化，并在整场开始前各预选 First To 位指挥官，之后每局胜出的本方指挥官不可再用；天梯 1v1 BP 会在每个小局使用天梯 1v1 的随机地图与双方各选 3、互 Ban、互 Pick 流程；EVO BP 会先决定整场地图顺序，再由上一局败者决定后续小局的 EVO 选项。</small>
+            </label>
+            <label>
+                <span>每轮 BP 时间</span>
+                <input name="bp_step_seconds" type="number" min="10" max="600" value="{{ form_values.bp_step_seconds }}" required>
+                <small class="field-hint">单位为秒。赛事启用 BP 后，每一步操作都使用这里的限时。</small>
+            </label>
+            <div class="form-visibility-group" data-bp-visibility="commander_draft" hidden>
+            <label>
+                <span>指挥官池模式</span>
+                <select name="commander_shared_pool_mode">
+                    <option value="shared" {% if form_values.commander_shared_pool_mode == 'shared' %}selected{% endif %}>双方共享指挥官池</option>
+                    <option value="separate" {% if form_values.commander_shared_pool_mode == 'separate' %}selected{% endif %}>双方独立指挥官池</option>
+                </select>
+                <small class="field-hint">仅随机地图 + 指挥官 BP 生效。共享时，对方已选指挥官也会从你的可选列表中移除。</small>
+            </label>
+            <label>
+                <span>指挥官 Ban 生效范围</span>
+                <select name="commander_ban_mode">
+                    <option value="global" {% if form_values.commander_ban_mode == 'global' %}selected{% endif %}>Ban 全局生效</option>
+                    <option value="opponent_only" {% if form_values.commander_ban_mode == 'opponent_only' %}selected{% endif %}>Ban 仅限制对方</option>
+                </select>
+                <small class="field-hint">仅随机地图 + 指挥官 BP 生效。全局生效时，你 Ban 掉的指挥官自己也不能选。</small>
+            </label>
+            </div>
+            <label class="checkbox-row checkbox-block-row">
+                <input name="replay_result_enabled" type="checkbox" {% if form_values.replay_result_enabled %}checked{% endif %}>
+                <span>启用 replay 上传归档</span>
+                <small class="field-hint">启用后，玩家将在"我的对阵"里逐小局上传 replay 进行归档保存，并通过双方投票判定本局胜负。</small>
+            </label>
+        </div>
+
+        <div class="form-grid single-column">
+            <label>
+                <span>赛事描述信息</span>
+                <textarea name="description" rows="5" placeholder="填写赛事简介、参赛要求、赛程说明等" required>{{ form_values.description or '' }}</textarea>
+            </label>
+            <label>
+                <span>赛事奖金信息</span>
+                <textarea name="prize_info" rows="3" placeholder="例如：冠军 5000 / 亚军 2000">{{ form_values.prize_info or '' }}</textarea>
+            </label>
+            <label>
+                <span>赛事地图池信息</span>
+                <small class="field-hint">请使用英文逗号加空格分隔，例如：Metalopolis, Shakuras Plateau, Tal'Darim Altar</small>
+                <textarea name="map_pool" rows="3" placeholder="例如：Metalopolis, Shakuras Plateau, Tal'Darim Altar">{{ form_values.map_pool or '' }}</textarea>
+            </label>
+            <label class="checkbox-row">
+                <input name="hide_bracket_until_publish" type="checkbox" {% if form_values.hide_bracket_until_publish %}checked{% endif %}>
+                <span>在主办方确认并公布对阵表前，隐藏“对阵表”按钮</span>
+            </label>            {% if is_superadmin %}
+                <label class="checkbox-row">
+                    <input name="is_points_event" type="checkbox" {% if form_values.is_points_event %}checked{% endif %} onchange="document.getElementById('points_for_champion').disabled = !this.checked">
+                    <span>积分赛事（仅超级管理员可创建，积分需手动在后台管理）</span>
+                </label>
+                <label>
+                    <span>冠军积分</span>
+                    <input id="points_for_champion" name="points_for_champion" type="number" min="1" value="{{ form_values.points_for_champion or 0 }}" {% if not form_values.is_points_event %}disabled{% endif %}>
+                    <small class="field-hint">冠军获得全部积分，亚军获得一半，三四名获得四分之一，以此类推。<strong>仅供展示，实际积分由管理员手动管理。</strong></small>
+                </label>
+            {% endif %}
+            <label class="checkbox-row">
+                <input name="is_private" type="checkbox" {% if form_values.is_private %}checked{% endif %}>
+                <span>私密赛事（仅通过邀请码加入，不会在全部比赛中显示）</span>
+            </label>        </div>
+
+        <div class="form-actions">
+            <button class="primary-button" type="submit">创建赛事</button>
+        </div>
+    </form>
+</section>
+<script>
+(function() {
+    var bpSelect = document.querySelector('select[name="bp_mode"]');
+    var commanderGroup = document.querySelector('[data-bp-visibility="commander_draft"]');
+    function toggleCommanderFields() {
+        if (commanderGroup) {
+            commanderGroup.hidden = bpSelect.value !== 'commander_draft';
+        }
+    }
+    if (bpSelect && commanderGroup) {
+        bpSelect.addEventListener('change', toggleCommanderFields);
+        toggleCommanderFields();
+    }
+})();
+</script>
+{% endblock %}

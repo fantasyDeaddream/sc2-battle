@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>风暴对决 · 平衡性改动 — Storm Showdown Balance Update 2026.7.21</title>
+<style>
+:root {
+    --bg-primary: #060608;
+    --bg-secondary: #0e0e14;
+    --bg-card: #14141c;
+    --bg-card-hover: #1a1a26;
+    --text-primary: #d8d0c0;
+    --text-secondary: #988870;
+    --text-heading: #e8e0d0;
+    --accent-gold: #c8a040;
+    --accent-blue: #5088c0;
+    --accent-green: #48a860;
+    --accent-red: #c04848;
+    --accent-purple: #9b40c0;
+    --accent-cyan: #40b8c0;
+    --accent-ptr: #e07040;
+    --border-subtle: #282830;
+    --border-card: #2a2a35;
+    --shadow-card: 0 2px 16px rgba(0,0,0,.4);
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+    font-family: 'Segoe UI','Noto Sans SC','Microsoft YaHei',sans-serif;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    line-height: 1.85;
+    overflow-x: hidden;
+}
+.hero {
+    position: relative;
+    background: linear-gradient(180deg, #1a0e08 0%, #0f0a10 30%, #060608 100%);
+    padding: 60px 20px 40px;
+    text-align: center;
+    border-bottom: 1px solid var(--border-subtle);
+    overflow: hidden;
+}
+.hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+        radial-gradient(ellipse at 30% 20%, rgba(224,112,64,.12) 0%, transparent 50%),
+        radial-gradient(ellipse at 70% 60%, rgba(200,160,64,.06) 0%, transparent 50%),
+        radial-gradient(ellipse at 50% 100%, rgba(224,112,64,.10) 0%, transparent 40%);
+    pointer-events: none;
+}
+.hero::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--accent-ptr), transparent);
+    opacity: .5;
+}
+.hero-badge {
+    display: inline-block;
+    background: var(--accent-ptr);
+    color: #0a0a0f;
+    font-weight: 700;
+    font-size: .7rem;
+    letter-spacing: 3px;
+    padding: 5px 16px;
+    border-radius: 3px;
+    margin-bottom: 14px;
+    text-transform: uppercase;
+}
+.hero h1 {
+    font-size: 2.1rem;
+    color: var(--text-heading);
+    letter-spacing: 2px;
+    margin: 8px 0;
+}
+.hero h1 .sub {
+    display: block;
+    font-size: .42em;
+    color: var(--text-secondary);
+    font-weight: 400;
+    margin-top: 6px;
+    letter-spacing: 1px;
+}
+.hero-version { color: var(--text-secondary); font-size: .85rem; margin-top: 10px; }
+.container { max-width: 940px; margin: 0 auto; padding: 0 24px; }
+.section-divider {
+    display: flex; align-items: center; justify-content: center;
+    gap: 16px; margin: 40px 0 24px;
+}
+.section-divider .line {
+    flex: 1; max-width: 120px; height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(224,112,64,.3));
+}
+.section-divider .line:last-child {
+    background: linear-gradient(90deg, rgba(224,112,64,.3), transparent);
+}
+.section-divider .icon { font-size: 1.3rem; opacity: .6; }
+.section-header { text-align: center; margin: 8px 0 28px; }
+.section-header h2 {
+    display: inline-block;
+    font-size: 1.15rem; letter-spacing: 3px; text-transform: uppercase;
+    padding: 8px 24px; border: 1px solid var(--accent-ptr); border-radius: 4px;
+    color: var(--accent-ptr);
+}
+.note-block {
+    background: var(--bg-card); border: 1px solid var(--border-subtle);
+    border-radius: 8px; padding: 18px 22px; margin: 20px 0;
+}
+.note-block h3 { color: var(--accent-gold); font-size: .95rem; letter-spacing: 1px; margin-bottom: 8px; }
+.note-block p { font-size: .85rem; color: var(--text-secondary); }
+.old-val { color: var(--accent-red); text-decoration: line-through; opacity: .75; }
+.new-val { color: var(--accent-green); font-weight: 600; }
+.arrow { color: var(--accent-gold); margin: 0 4px; }
+.global-card {
+    background: var(--bg-card); border: 1px solid var(--border-card);
+    border-radius: 8px; padding: 20px 24px; margin: 14px 0;
+    border-left: 3px solid var(--accent-gold);
+    transition: border-color .2s, background .2s;
+}
+.global-card:hover { border-color: rgba(200,160,64,.4); background: var(--bg-card-hover); }
+.global-card h3 { font-size: .95rem; color: var(--text-heading); margin-bottom: 8px; letter-spacing: 1px; }
+.global-card ul { list-style: none; padding: 0; }
+.global-card ul li { padding: 4px 0; font-size: .86rem; color: var(--text-secondary); }
+.global-card ul li strong { color: var(--text-primary); }
+.cmdr-card {
+    background: var(--bg-card); border: 1px solid var(--border-card);
+    border-radius: 10px; padding: 0; margin: 18px 0;
+    display: flex; overflow: hidden;
+    transition: border-color .2s, box-shadow .2s;
+    box-shadow: var(--shadow-card);
+}
+.cmdr-card:hover { border-color: rgba(224,112,64,.27); box-shadow: 0 4px 24px rgba(0,0,0,.5); }
+.cmdr-card .cmdr-portrait {
+    flex-shrink: 0; width: 200px; min-height: 240px;
+    background-size: cover; background-position: center top; background-repeat: no-repeat;
+    position: relative; border-right: 1px solid var(--border-subtle);
+}
+.cmdr-card .cmdr-portrait::after {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(180deg, transparent 50%, rgba(6,6,8,.7) 95%, var(--bg-card) 100%);
+}
+.cmdr-card .cmdr-body { flex: 1; padding: 20px 24px; min-width: 0; }
+.cmdr-card .cmdr-body h4 { font-size: 1.05rem; color: var(--text-heading); margin-bottom: 4px; letter-spacing: 1px; }
+.cmdr-card .cmdr-body .cmdr-en { font-size: .78rem; color: var(--text-secondary); font-weight: 400; margin-left: 4px; }
+.cmdr-card .cmdr-body .change-list { list-style: none; padding: 0; margin-top: 10px; }
+.cmdr-card .cmdr-body .change-list li { padding: 5px 0; font-size: .86rem; color: var(--text-secondary); line-height: 1.7; }
+.cmdr-card .cmdr-body .change-list li strong { color: var(--text-primary); }
+.desc-block {
+    background: var(--bg-secondary); border-left: 3px solid var(--accent-ptr);
+    padding: 14px 18px; margin: 10px 0; border-radius: 0 6px 6px 0;
+    font-size: .84rem; color: var(--text-secondary); line-height: 1.8;
+}
+.desc-block strong { color: var(--text-primary); }
+.reason-block {
+    background: var(--bg-secondary); border-left: 3px solid var(--accent-blue);
+    padding: 12px 16px; margin: 8px 0 4px; border-radius: 0 6px 6px 0;
+    font-size: .82rem; color: var(--text-secondary); line-height: 1.7;
+}
+.reason-block::before { content: '💡 调整原因：'; font-weight: 600; color: var(--accent-blue); }
+.ptr-summary {
+    background: var(--bg-card); border: 1px solid var(--border-card);
+    border-radius: 10px; padding: 22px 26px; margin: 18px 0;
+}
+.ptr-summary h3 { font-size: .95rem; color: var(--accent-ptr); margin-bottom: 14px; letter-spacing: 1px; }
+.ptr-summary-table { width: 100%; border-collapse: collapse; font-size: .85rem; }
+.ptr-summary-table thead th {
+    padding: 10px 14px; text-align: left; color: var(--accent-ptr);
+    font-weight: 600; letter-spacing: 1px; font-size: .76rem;
+    text-transform: uppercase; border-bottom: 2px solid var(--border-subtle);
+}
+.ptr-summary-table tbody td { padding: 8px 14px; border-bottom: 1px solid rgba(255,255,255,.04); color: var(--text-secondary); }
+.ptr-summary-table tbody tr:hover { background: rgba(224,112,64,.04); }
+.ptr-summary-table .cmdr-name { color: var(--text-primary); font-weight: 600; }
+.site-footer {
+    text-align: center; padding: 36px 20px; color: var(--text-secondary);
+    font-size: .76rem; border-top: 1px solid var(--border-subtle); margin-top: 40px;
+}
+.site-footer p { margin: 4px 0; }
+@media (max-width: 720px) {
+    .hero h1 { font-size: 1.4rem; }
+    .cmdr-card { flex-direction: column; }
+    .cmdr-card .cmdr-portrait {
+        width: 100%; min-height: 180px; max-height: 240px;
+        border-right: none; border-bottom: 1px solid var(--border-subtle);
+    }
+    .container { padding: 0 14px; }
+}
+.cmdr-card, .global-card, .ptr-summary { animation: fadeUp .5s ease both; }
+@keyframes fadeUp {
+    from { opacity:0; transform:translateY(12px); }
+    to { opacity:1; transform:translateY(0); }
+}
+.cmdr-card:nth-child(1) { animation-delay: .05s; }
+.cmdr-card:nth-child(2) { animation-delay: .10s; }
+.cmdr-card:nth-child(3) { animation-delay: .15s; }
+.cmdr-card:nth-child(4) { animation-delay: .20s; }
+.cmdr-card:nth-child(5) { animation-delay: .25s; }
+.cmdr-card:nth-child(6) { animation-delay: .30s; }
+</style>
+</head>
+<body>
+
+<header class="hero">
+    <span class="hero-badge">UPDATE · 更新</span>
+    <h1>风暴对决 · 平衡性改动<span class="sub">Storm Showdown — Co-op PVP Balance Update 2026.7.21</span></h1>
+    <div class="hero-version">星际争霸II 合作模式 PVP · 2v2 周赛赛后改动 · 2026年7月21日</div>
+</header>
+
+<main class="container">
+
+<div class="note-block">
+    <h3>📋 阅读备注 · Notes</h3>
+    <p>本次改动基于 2v2 周赛赛后数据分析与玩家反馈制定。标注 <strong>【】</strong> 内为更快（即游戏内）速度数值。DS = Direct Strike。</p>
+</div>
+
+<div class="ptr-summary">
+    <h3>本次更新涉及指挥官 · Affected Commanders</h3>
+    <table class="ptr-summary-table">
+    <thead><tr><th>指挥官</th><th>摘要</th></tr></thead>
+    <tbody>
+    <tr><td class="cmdr-name">通用</td><td>自动菌毯功能</td></tr>
+    <tr><td class="cmdr-name">诺娃</td><td>防御无人机削弱、隐秘女妖CD增加、快速投送间隔调整</td></tr>
+    <tr><td class="cmdr-name">蒙斯克</td><td>元首鬼影削弱、帝国仲裁机血量回调、虫群减半</td></tr>
+    <tr><td class="cmdr-name">沃拉尊</td><td>黑暗圣堂武士暗影之怒增强、闪现CD增加</td></tr>
+    <tr><td class="cmdr-name">斯托科夫</td><td>腐蚀粘液研发时间、女王能量回复、瘟疫守望者增强</td></tr>
+    <tr><td class="cmdr-name">德哈卡</td><td>穆尔瓦虫群CD、暴龙兽晕眩时间调整</td></tr>
+    <tr><td class="cmdr-name">凯瑞甘</td><td>刺蛇Bug修复、欧米茄虫道建造时间</td></tr>
+    </tbody>
+    </table>
+</div>
+
+<!-- ═══ 通用改动 ═══ -->
+<div class="section-divider">
+    <span class="line"></span><span class="icon">⚙</span><span class="line"></span>
+</div>
+<div class="section-header"><h2>通用改动 · General Changes</h2></div>
+
+<div class="global-card">
+    <h3>自动菌毯 · Auto Creep</h3>
+    <ul>
+        <li>增加<strong>自动菌毯功能</strong>，每个指挥官最多 <strong>5 个菌毯</strong>会自动铺设</li>
+        <li>输入 <strong>AutoCreepOff</strong> 关闭功能</li>
+        <li>输入 <strong>AutoCreepOn</strong> 打开功能</li>
+    </ul>
+</div>
+
+<!-- ═══ 指挥官改动 ═══ -->
+<div class="section-divider">
+    <span class="line"></span><span class="icon">⚔</span><span class="line"></span>
+</div>
+<div class="section-header"><h2>指挥官平衡性改动 · Commander Changes</h2></div>
+
+<!-- ─── 诺娃 ─── -->
+<div class="cmdr-card">
+    <div class="cmdr-portrait" style="background-image:url('https://raw.githubusercontent.com/fantasyDeaddream/storm-showdown-assets/main/Commander_Figures/Ui_loading_coop_hero_nova.png')"></div>
+    <div class="cmdr-body">
+        <h4>诺娃 <span class="cmdr-en">Nova</span></h4>
+        <ul class="change-list">
+            <li><strong>防御无人机</strong>护盾持续时间：<span class="old-val">30S【21S】</span> <span class="arrow">→</span> <span class="new-val">14S【10S】</span>（同DS）</li>
+        </ul>
+        <div class="reason-block">21S的持续时间对于第一波压制有着过于优秀的作用，一个防御无人机几乎可以化解任何第一波的反压制。调整到10S（同DS），并不影响打团——大多数团战的接触都在10S内完成，玩家对防御无人机的释放需要更加精细。</div>
+        <ul class="change-list">
+            <li><strong>隐秘女妖</strong>火箭弹幕 CD：<span class="old-val">15S【10.7S】</span> <span class="arrow">→</span> <span class="new-val">28S【20S】</span>（同DS）</li>
+        </ul>
+        <div class="reason-block">成型的隐秘女妖对于地面单位和农民有毁灭性的杀伤能力，将其增加到DS的CD以减弱该能力。</div>
+        <ul class="change-list">
+            <li><strong>快速投送</strong>增加间隔 CD：<span class="new-val">2S【1.4S】</span>（同霍纳）</li>
+        </ul>
+    </div>
+</div>
+
+<!-- ─── 蒙斯克 ─── -->
+<div class="cmdr-card">
+    <div class="cmdr-portrait" style="background-image:url('https://raw.githubusercontent.com/fantasyDeaddream/storm-showdown-assets/main/Commander_Figures/Ui_loading_coop_hero_mengsk.png')"></div>
+    <div class="cmdr-body">
+        <h4>蒙斯克 <span class="cmdr-en">Mengsk</span></h4>
+        <ul class="change-list">
+            <li><strong>元首鬼影</strong>迷宫式隐形迷彩持续时间：<span class="old-val">10S【7.1S】</span> <span class="arrow">→</span> <span class="new-val">6.5S【4.6S】</span></li>
+            <li>焰能爆燃能量消耗提升到 <strong>100</strong>，CD：<span class="old-val">5S【4S】</span> <span class="arrow">→</span> <span class="new-val">14S【10S】</span></li>
+        </ul>
+        <div class="reason-block">元首鬼影的综合能力在大多时间过于优秀，数值改动到同DS。</div>
+        <ul class="change-list">
+            <li><strong>帝国仲裁机</strong>血量：<span class="new-val">回调到原版 150</span></li>
+        </ul>
+        <div class="reason-block">空投壁垒卫士已成为蒙斯克的主流打法，300+100血量追击空投的难度过大。</div>
+        <ul class="change-list">
+            <li><strong>释放虫群</strong>的价格、数量、能量消耗<strong>减半</strong></li>
+        </ul>
+    </div>
+</div>
+
+<!-- ─── 沃拉尊 ─── -->
+<div class="cmdr-card">
+    <div class="cmdr-portrait" style="background-image:url('https://raw.githubusercontent.com/fantasyDeaddream/storm-showdown-assets/main/Commander_Figures/Ui_loading_coop_hero_vorazun.png')"></div>
+    <div class="cmdr-body">
+        <h4>沃拉尊 <span class="cmdr-en">Vorazun</span></h4>
+        <ul class="change-list">
+            <li><strong>黑暗圣堂武士</strong>暗影之怒 CD：<span class="old-val">15S【11S】</span> <span class="arrow">→</span> <span class="new-val">11S【8S】</span></li>
+            <li>暗影之怒伤害：<span class="old-val">15（+20 对轻甲）</span> <span class="arrow">→</span> <span class="new-val">20（+15 对轻甲）</span></li>
+            <li>闪现 CD：<span class="old-val">10S【7S】</span> <span class="arrow">→</span> <span class="new-val">20S【14S】</span></li>
+        </ul>
+        <div class="reason-block">部分同DS（DS中闪现为28S【20S】CD，但对战来说过长）。该改动旨在提升黑暗圣堂武士的正面作战能力，减弱控制与机动能力。</div>
+    </div>
+</div>
+
+<!-- ─── 斯托科夫 ─── -->
+<div class="cmdr-card">
+    <div class="cmdr-portrait" style="background-image:url('https://raw.githubusercontent.com/fantasyDeaddream/storm-showdown-assets/main/Commander_Figures/Ui_loading_coop_hero_stukov.png')"></div>
+    <div class="cmdr-body">
+        <h4>斯托科夫 <span class="cmdr-en">Stukov</span></h4>
+        <ul class="change-list">
+            <li><strong>腐蚀粘液</strong>科技研发时间：<span class="new-val">降低到 100S【71S】</span></li>
+            <li><strong>虫巢女王</strong>增强型线粒体能量回复速度加成：<span class="old-val">100%</span> <span class="arrow">→</span> <span class="new-val">30%</span>（同DS）</li>
+            <li>天赋 <strong>"瘟疫守望者"</strong>：女妖发射感染人间隔 <span class="old-val">0.2</span> <span class="arrow">→</span> <span class="new-val">0.1</span></li>
+        </ul>
+    </div>
+</div>
+
+<!-- ─── 德哈卡 ─── -->
+<div class="cmdr-card">
+    <div class="cmdr-portrait" style="background-image:url('https://raw.githubusercontent.com/fantasyDeaddream/storm-showdown-assets/main/Commander_Figures/Ui_loading_coop_hero_dehaka.png')"></div>
+    <div class="cmdr-body">
+        <h4>德哈卡 <span class="cmdr-en">Dehaka</span></h4>
+        <ul class="change-list">
+            <li><strong>穆尔瓦</strong>孵化虫群技能 CD：<span class="new-val">降低到 10S【7S】</span></li>
+            <li><strong>暴龙兽</strong>穿刺打击晕眩时间：<span class="old-val">2S【1.4S】</span> <span class="arrow">→</span> <span class="new-val">1.4S【1S】</span>（同DS）</li>
+        </ul>
+    </div>
+</div>
+
+<!-- ─── 凯瑞甘 ─── -->
+<div class="cmdr-card">
+    <div class="cmdr-portrait" style="background-image:url('https://raw.githubusercontent.com/fantasyDeaddream/storm-showdown-assets/main/Commander_Figures/Ui_loading_coop_hero_kerrigan.png')"></div>
+    <div class="cmdr-body">
+        <h4>凯瑞甘 <span class="cmdr-en">Kerrigan</span></h4>
+        <ul class="change-list">
+            <li>修复<strong>刺蛇</strong>攻击伤害和射程 Bug</li>
+            <li><strong>欧米茄虫道</strong>建造时间：<span class="new-val">增加到 10S【7S】</span></li>
+        </ul>
+    </div>
+</div>
+
+</main>
+
+<footer class="site-footer">
+    <p>风暴对决 · Storm Showdown — 星际争霸II 合作模式 PVP 社区平衡项目</p>
+    <p style="opacity:.5">StarCraft® II and all related trademarks are the property of Blizzard Entertainment, Inc. This is a fan-made community balance project.</p>
+    <p style="opacity:.4;margin-top:8px;">—— 2v2 周赛赛后改动 · 2026.7.21 ——</p>
+</footer>
+
+</body>
+</html>

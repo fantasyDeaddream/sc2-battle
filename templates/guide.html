@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<section class="dashboard-hero guide-hero">
+    <div>
+        <p class="eyebrow">Operation Guide</p>
+        <h1>平台操作指南</h1>
+        <p class="muted-copy">本页固定展示平台操作指南 PDF。后续如需更新内容，直接替换固定目录中的 PDF 文件即可。</p>
+    </div>
+    <div class="hero-actions">
+        {% if guide_pdf_exists %}
+            <a class="primary-button" href="{{ guide_pdf_url }}" target="_blank" rel="noopener">新窗口打开 PDF</a>
+            <a class="ghost-button" href="{{ guide_pdf_url }}" download>下载 PDF</a>
+        {% endif %}
+    </div>
+</section>
+
+<section class="surface-card main-panel guide-layout">
+    <div class="panel-header">
+        <div>
+            <p class="eyebrow">固定目录</p>
+            <h2>{{ guide_pdf_relative_path }}</h2>
+        </div>
+    </div>
+    <p class="muted-copy">你可以直接替换上方路径中的 PDF 文件；网页会始终读取这一个固定文件。</p>
+
+    {% if guide_pdf_exists %}
+        <iframe class="guide-frame" src="{{ guide_pdf_url }}#view=FitH" title="SC2 Battle 操作指南 PDF"></iframe>
+    {% else %}
+        <div class="alert alert-error">当前目录下还没有操作指南 PDF，请先生成或替换 {{ guide_pdf_relative_path }}。</div>
+    {% endif %}
+</section>
+{% endblock %}

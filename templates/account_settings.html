@@ -1,0 +1,382 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<section class="form-header">
+    <div>
+        <p class="eyebrow">账户中心</p>
+        <h1>个人资料与装饰</h1>
+        <p class="muted-copy">设置头像、昵称、头像框、昵称框与昵称颜色。</p>
+    </div>
+    <a class="ghost-button" href="/dashboard">返回赛事大厅</a>
+</section>
+
+<section class="card-grid settings-grid">
+    {# --- 头像卡片 --- #}
+    <article class="surface-card form-card settings-card">
+        <div class="panel-header compact-header">
+            <div>
+                <p class="eyebrow">头像</p>
+                <h2>设置头像</h2>
+            </div>
+        </div>
+        <div style="text-align:center;padding:12px 0;">
+            {{ render_user_avatar_html(current_user, 112) | safe }}
+            <p class="muted-copy" style="margin-top:4px;">当前头像</p>
+            {% if current_user_game_nickname %}
+            <div style="margin-top:10px;">
+                {{ render_user_nickname_html(current_user, 42) | safe }}
+            </div>
+            {% endif %}
+        </div>
+        {% if avatar_error %}
+            <div class="alert alert-error">{{ avatar_error }}</div>
+        {% endif %}
+        {% if avatar_success %}
+            <div class="alert alert-success">{{ avatar_success }}</div>
+        {% endif %}
+
+        <details style="margin-bottom:12px;" id="avatar-upload-details">
+            <summary class="ghost-button" style="cursor:pointer;">📷 上传自定义头像</summary>
+            <div class="signup-form" style="margin-top:8px;">
+                <label>
+                    <span>选择图片（PNG/JPEG/WebP，≤5MB）</span>
+                    <input id="avatar-file-input" type="file" accept="image/*">
+                </label>
+                <div id="avatar-crop-area" style="display:none;margin-top:10px;">
+                    <p class="muted-copy" style="margin-bottom:6px;">拖拽图片调整裁剪区域（正方形），确认后上传：</p>
+                    <div id="avatar-crop-container" style="position:relative;width:100%;max-width:360px;height:360px;overflow:hidden;border:2px dashed var(--accent);border-radius:8px;cursor:move;margin:0 auto;">
+                        <canvas id="avatar-crop-canvas" style="position:absolute;top:0;left:0;width:100%;height:100%;"></canvas>
+                        <div id="avatar-crop-overlay" style="position:absolute;inset:0;border:2px solid var(--accent);border-radius:4px;pointer-events:none;box-shadow:0 0 0 9999px rgba(0,0,0,0.35);"></div>
+                    </div>
+                    <div style="text-align:center;margin-top:8px;">
+                        <input id="avatar-crop-zoom" type="range" min="0.5" max="3" step="0.05" value="1" style="width:200px;vertical-align:middle;">
+                        <span class="muted-copy" style="margin-left:6px;">缩放</span>
+                    </div>
+                    <div class="form-actions">
+                        <button id="avatar-crop-confirm" class="primary-button" type="button">裁剪并上传</button>
+                        <button id="avatar-crop-cancel" class="ghost-button" type="button">取消</button>
+                    </div>
+                </div>
+            </div>
+        </details>
+
+        <details style="margin-bottom:12px;">
+            <summary class="ghost-button" style="cursor:pointer;">🖼️ 选择默认头像</summary>
+            <form method="post" action="/account/avatar/select" class="signup-form" style="margin-top:8px;">
+                <div style="display:flex;gap:12px;flex-wrap:wrap;">
+                    {% for avatar_name in default_avatars %}
+                        <label style="cursor:pointer;text-align:center;">
+                            <input type="radio" name="avatar_name" value="{{ avatar_name }}" style="display:none;">
+                            <img src="/background/normal/{{ avatar_name }}" alt="{{ avatar_name }}" style="width:72px;height:72px;border-radius:8px;border:2px solid var(--line);" onerror="this.src='/background/normal/terran.png'">
+                        </label>
+                    {% endfor %}
+                </div>
+                <div class="form-actions">
+                    <button class="primary-button" type="submit">使用选中头像</button>
+                </div>
+            </form>
+        </details>
+    </article>
+
+    {# --- 昵称颜色卡片（仅赞助用户可见） --- #}
+    {% if current_user.is_sponsor %}
+    <article class="surface-card form-card settings-card">
+        <div class="panel-header compact-header">
+            <div>
+                <p class="eyebrow">装饰</p>
+                <h2>昵称颜色</h2>
+            </div>
+            <span class="status-badge success">赞助用户专属</span>
+        </div>
+        {% if cosmetic_error %}
+            <div class="alert alert-error">{{ cosmetic_error }}</div>
+        {% endif %}
+        {% if cosmetic_success %}
+            <div class="alert alert-success">{{ cosmetic_success }}</div>
+        {% endif %}
+        <form method="post" action="/account/cosmetics" class="signup-form">
+            <label>
+                <span>昵称颜色</span>
+                <input name="nickname_color" type="color" value="{{ current_user.nickname_color or '#d96b2b' }}">
+            </label>
+            <div class="form-actions" style="display:flex;gap:8px;">
+                <button class="primary-button" type="submit">保存颜色</button>
+                <button class="ghost-button" type="submit" formaction="/account/cosmetics" onclick="var c=this.form.nickname_color;c.value='';return true;">恢复默认</button>
+            </div>
+        </form>
+    </article>
+    {% endif %}
+
+    {# --- 头像框卡片（仅赞助用户可见） --- #}
+    {% if current_user.is_sponsor %}
+    <article class="surface-card form-card settings-card">
+        <div class="panel-header compact-header">
+            <div>
+                <p class="eyebrow">装饰</p>
+                <h2>头像框</h2>
+            </div>
+            <span class="status-badge success">赞助用户专属</span>
+        </div>
+        <div style="text-align:center;padding:12px 0;">
+            {{ render_user_avatar_html(current_user, 112) | safe }}
+            <p class="muted-copy" style="margin-top:4px;">当前头像 + 头像框效果</p>
+        </div>
+        {% if frame_error %}
+            <div class="alert alert-error">{{ frame_error }}</div>
+        {% endif %}
+        {% if frame_success %}
+            <div class="alert alert-success">{{ frame_success }}</div>
+        {% endif %}
+        <form method="post" action="/account/avatar/frame" class="signup-form">
+            <div style="display:flex;gap:20px;flex-wrap:wrap;">
+                <label class="frame-option">
+                    <input type="radio" name="frame" value="" style="display:none;" {% if not current_frame %}checked{% endif %}>
+                    <span class="frame-option-preview" style="display:inline-flex;align-items:center;justify-content:center;width:64px;height:64px;font-size:0.8rem;">无框</span>
+                </label>
+                {% for frame_name in available_frames %}
+                <label class="frame-option">
+                    <input type="radio" name="frame" value="{{ frame_name }}" style="display:none;" {% if current_frame == frame_name %}checked{% endif %}>
+                    <span class="frame-option-preview" style="display:inline-block;">
+                        {{ render_avatar_frame_preview(current_user, frame_name, 64) | safe }}
+                    </span>
+                    <span class="frame-option-name">{{ frame_name[:-4] }}</span>
+                </label>
+                {% endfor %}
+            </div>
+            <div class="form-actions">
+                <button class="primary-button" type="submit">保存头像框</button>
+            </div>
+        </form>
+    </article>
+    {% endif %}
+
+    {# --- 昵称卡片 --- #}
+    <article class="surface-card form-card settings-card">
+        <div class="panel-header compact-header">
+            <div>
+                <p class="eyebrow">资料</p>
+                <h2>绑定游戏内昵称</h2>
+            </div>
+            <span class="status-badge {% if current_user_game_nickname %}success{% else %}warning{% endif %}">{{ current_user_game_nickname or '未绑定' }}</span>
+        </div>
+        <p class="muted-copy">上传 replay 自动判负和 replay 测试页面都会使用这里的昵称做匹配。</p>
+        {% if profile_error %}
+            <div class="alert alert-error">{{ profile_error }}</div>
+        {% endif %}
+        {% if profile_success %}
+            <div class="alert alert-success">{{ profile_success }}</div>
+        {% endif %}
+        <form method="post" action="/account/settings/profile" class="signup-form">
+            <label>
+                <span>游戏内昵称</span>
+                <input name="game_nickname" type="text" value="{{ current_user_game_nickname or '' }}" placeholder="请输入你的 SC2 游戏内昵称" required>
+            </label>
+            <div class="form-actions">
+                <button class="primary-button" type="submit">保存昵称</button>
+            </div>
+        </form>
+    </article>
+
+    {# --- 密码卡片 --- #}
+    <article class="surface-card form-card settings-card">
+        <div class="panel-header compact-header">
+            <div>
+                <p class="eyebrow">安全</p>
+                <h2>修改登录密码</h2>
+            </div>
+        </div>
+        <p class="muted-copy">修改后下次登录请使用新密码。</p>
+        {% if password_error %}
+            <div class="alert alert-error">{{ password_error }}</div>
+        {% endif %}
+        {% if password_success %}
+            <div class="alert alert-success">{{ password_success }}</div>
+        {% endif %}
+        <form method="post" action="/account/settings/password" class="signup-form">
+            <label>
+                <span>当前密码</span>
+                <input name="current_password" type="password" placeholder="输入当前密码" required>
+            </label>
+            <label>
+                <span>新密码</span>
+                <input name="new_password" type="password" placeholder="至少 6 位" required>
+            </label>
+            <label>
+                <span>确认新密码</span>
+                <input name="confirm_password" type="password" placeholder="再次输入新密码" required>
+            </label>
+            <div class="form-actions">
+                <button class="primary-button" type="submit">更新密码</button>
+            </div>
+        </form>
+    </article>
+</section>
+
+<script>
+(function() {
+    var fileInput = document.getElementById('avatar-file-input');
+    var cropArea = document.getElementById('avatar-crop-area');
+    var cropCanvas = document.getElementById('avatar-crop-canvas');
+    var cropContainer = document.getElementById('avatar-crop-container');
+    var zoomSlider = document.getElementById('avatar-crop-zoom');
+    var confirmBtn = document.getElementById('avatar-crop-confirm');
+    var cancelBtn = document.getElementById('avatar-crop-cancel');
+    var details = document.getElementById('avatar-upload-details');
+
+    if (!fileInput || !cropCanvas || !cropArea) return;
+
+    var ctx = cropCanvas.getContext('2d');
+    var img = null;
+    var offsetX = 0, offsetY = 0, zoom = 1;
+    var dragging = false, dragStartX = 0, dragStartY = 0, startOffsetX = 0, startOffsetY = 0;
+    var viewSize = 0;
+
+    function getViewSize() { return cropContainer.clientWidth || 360; }
+    function clampOffset() {
+        if (!img) return;
+        viewSize = getViewSize();
+        var maxX = 0;
+        var minX = viewSize - img.width * zoom;
+        var maxY = 0;
+        var minY = viewSize - img.height * zoom;
+        offsetX = Math.max(minX, Math.min(maxX, offsetX));
+        offsetY = Math.max(minY, Math.min(maxY, offsetY));
+    }
+
+    function render() {
+        if (!img) return;
+        viewSize = getViewSize();
+        cropCanvas.width = viewSize;
+        cropCanvas.height = viewSize;
+        ctx.clearRect(0, 0, viewSize, viewSize);
+        // 深色背景
+        ctx.fillStyle = '#1a1a1a';
+        ctx.fillRect(0, 0, viewSize, viewSize);
+        // 绘制图片
+        ctx.drawImage(img, offsetX, offsetY, img.width * zoom, img.height * zoom);
+    }
+
+    function resetPosition() {
+        if (!img) return;
+        viewSize = getViewSize();
+        // 初始缩放：让短边填满视图
+        zoom = Math.max(viewSize / img.width, viewSize / img.height);
+        // 居中
+        offsetX = (viewSize - img.width * zoom) / 2;
+        offsetY = (viewSize - img.height * zoom) / 2;
+        zoomSlider.value = zoom;
+        render();
+    }
+
+    fileInput.addEventListener('change', function(e) {
+        var file = e.target.files[0];
+        if (!file) return;
+        if (file.size > 5 * 1024 * 1024) { alert('图片不能超过5MB'); return; }
+        var reader = new FileReader();
+        reader.onload = function(ev) {
+            img = new Image();
+            img.onload = function() {
+                resetPosition();
+                cropArea.style.display = 'block';
+                if (details) details.open = true;
+            };
+            img.src = ev.target.result;
+        };
+        reader.readAsDataURL(file);
+    });
+
+    cropContainer.addEventListener('mousedown', function(e) {
+        if (!img) return;
+        dragging = true;
+        dragStartX = e.clientX;
+        dragStartY = e.clientY;
+        startOffsetX = offsetX;
+        startOffsetY = offsetY;
+        e.preventDefault();
+    });
+
+    window.addEventListener('mousemove', function(e) {
+        if (!dragging || !img) return;
+        offsetX = startOffsetX + (e.clientX - dragStartX);
+        offsetY = startOffsetY + (e.clientY - dragStartY);
+        clampOffset();
+        render();
+    });
+
+    window.addEventListener('mouseup', function() { dragging = false; });
+
+    cropContainer.addEventListener('touchstart', function(e) {
+        if (!img || !e.touches.length) return;
+        dragging = true;
+        dragStartX = e.touches[0].clientX;
+        dragStartY = e.touches[0].clientY;
+        startOffsetX = offsetX;
+        startOffsetY = offsetY;
+    }, {passive: false});
+
+    window.addEventListener('touchmove', function(e) {
+        if (!dragging || !img || !e.touches.length) return;
+        offsetX = startOffsetX + (e.touches[0].clientX - dragStartX);
+        offsetY = startOffsetY + (e.touches[0].clientY - dragStartY);
+        clampOffset();
+        render();
+    }, {passive: false});
+
+    window.addEventListener('touchend', function() { dragging = false; });
+
+    zoomSlider.addEventListener('input', function() {
+        if (!img) return;
+        zoom = parseFloat(zoomSlider.value);
+        // 以视图中心为锚点调整偏移
+        viewSize = getViewSize();
+        var cx = (viewSize / 2 - offsetX) / (img.width * (zoom / parseFloat(zoomSlider.value)));
+        offsetX = viewSize / 2 - (viewSize / 2 - offsetX) / (parseFloat(zoomSlider.dataset.prevZoom || zoom) / zoom);
+        zoomSlider.dataset.prevZoom = zoom;
+        clampOffset();
+        render();
+    });
+
+    cancelBtn.addEventListener('click', function() {
+        cropArea.style.display = 'none';
+        fileInput.value = '';
+        img = null;
+    });
+
+    confirmBtn.addEventListener('click', function() {
+        if (!img) return;
+        viewSize = getViewSize();
+
+        // 计算图像坐标中裁剪区域的位置
+        // 视图中的正方形区域 (0,0,viewSize,viewSize) 对应图像坐标
+        var cropLeft = -offsetX / zoom;
+        var cropTop = -offsetY / zoom;
+        var cropSide = viewSize / zoom;
+
+        // 限制在图像范围内
+        cropLeft = Math.max(0, Math.min(img.width - cropSide, cropLeft));
+        cropTop = Math.max(0, Math.min(img.height - cropSide, cropTop));
+        cropSide = Math.min(cropSide, img.width - cropLeft, img.height - cropTop);
+
+        // 输出正方形裁剪结果
+        var outSize = Math.min(512, Math.round(cropSide));
+        var outCanvas = document.createElement('canvas');
+        outCanvas.width = outSize;
+        outCanvas.height = outSize;
+        var outCtx = outCanvas.getContext('2d');
+        outCtx.drawImage(img, cropLeft, cropTop, cropSide, cropSide, 0, 0, outSize, outSize);
+
+        outCanvas.toBlob(function(blob) {
+            if (!blob) { alert('裁剪失败，请重试'); return; }
+            var formData = new FormData();
+            formData.append('avatar_file', blob, 'avatar_cropped.png');
+            fetch('/account/avatar/upload', { method: 'POST', body: formData, credentials: 'same-origin' })
+                .then(function(resp) {
+                    if (resp.redirected) { window.location.href = resp.url; }
+                    else { window.location.reload(); }
+                })
+                .catch(function() { alert('上传失败，请重试'); });
+        }, 'image/png');
+    });
+})();
+</script>
+{% endblock %}

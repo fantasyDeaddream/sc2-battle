@@ -1,0 +1,211 @@
+{% import '_commander_macros.html' as commander_ui with context %}
+
+<div
+    class="ladder-panel-span"
+    data-bp-partial-target="ladder-match-panel"
+    data-bp-next-sync-url="{{ ladder_sync.url if ladder_sync else '' }}"
+    data-bp-next-sync-key="{{ ladder_sync.key if ladder_sync else '' }}"
+    data-ladder-current-match-id="{{ ladder_match.id if ladder_match else '' }}"
+    data-ladder-current-match-state="{{ ladder_match.state if ladder_match else '' }}"
+>
+    <article class="surface-card nested-card ladder-card ladder-queue-card">
+        <p class="eyebrow">天梯队列</p>
+        <h2>{{ '1v1 匹配' if ladder_mode == '1v1' else '2v2 匹配' }}</h2>
+        <p class="meta-text">{{ ladder_queue.status_text }}</p>
+        {% if ladder_queue.queued %}
+            {% if ladder_queue.teammate_name %}
+                <p class="meta-text">当前队友：{{ ladder_queue.teammate_name }}</p>
+            {% endif %}
+            {% if ladder_queue.commanders %}
+                <div class="tag-list prep-tag-list">
+                    {% for commander in ladder_queue.commanders %}
+                        {{ commander_ui.commander_badge(commander) }}
+                    {% endfor %}
+                </div>
+            {% endif %}
+            <form method="post" action="/ladder/queue/cancel" class="stack-form">
+                <input type="hidden" name="mode" value="{{ ladder_mode }}">
+                <button class="ghost-button danger" type="submit">取消匹配</button>
+            </form>
+        {% elif ladder_match %}
+            <p class="muted-copy">当前已有进行中的天梯比赛，匹配功能已锁定。</p>
+        {% else %}
+            <form method="post" action="/ladder/queue/start" class="stack-form">
+                <input type="hidden" name="mode" value="{{ ladder_mode }}">
+                {% if ladder_mode == '1v1' %}
+                    <p class="meta-text">请选择 3 位指挥官进入 1v1 匹配。</p>
+                    <div class="checkbox-grid ladder-commander-grid ladder-queue-commander-grid">
+                        {% for commander in ladder_commander_pool %}
+                            <label class="checkbox-pill">
+                                <input type="checkbox" name="commanders" value="{{ commander }}">
+                                {{ commander_ui.commander_option_label(commander) }}
+                            </label>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <label>
+                        <span>2v2 队友账号</span>
+                        <input name="teammate" type="text" placeholder="请输入队友账号" required>
+                    </label>
+                    <p class="meta-text">发起后会将你和该队友一起放入 2v2 队列。</p>
+                {% endif %}
+                <button class="primary-button" type="submit">开始匹配</button>
+            </form>
+        {% endif %}
+    </article>
+
+    <article class="surface-card nested-card ladder-card ladder-match-card" data-ladder-match-anchor>
+        <p class="eyebrow">当前比赛</p>
+        {% if ladder_match %}
+            <div class="match-headline">
+                <span>#{{ ladder_match.serial_number }} · {{ ladder_match.mode_label }}</span>
+                <span>{{ ladder_match.state_label }}</span>
+            </div>
+            <p class="meta-text">地图：{{ ladder_match.map_name }}</p>
+            {% if ladder_match.countdown_seconds > 0 %}
+                <div class="prep-clock-row">
+                    <span class="status-badge warning">{{ '确认阶段剩余 ' ~ ladder_match.countdown_seconds ~ ' 秒，超时后本次匹配已失效' if ladder_match.state == 'pending_accept' else '当前阶段限时 ' ~ ladder_match.countdown_seconds ~ ' 秒' }}</span>
+                    <span class="prep-countdown" data-countdown-seconds="{{ ladder_match.countdown_seconds }}">{{ ladder_match.countdown_seconds }}s</span>
+                </div>
+            {% endif %}
+            <div class="ladder-team-grid">
+                <div class="surface-card nested-card ladder-team-card {% if ladder_match.my_side == 'A' %}is-current{% endif %}">
+                    <strong>队伍 A</strong>
+                    <p class="meta-text">{{ ladder_match.team_a.label }}</p>
+                    <div class="tag-list prep-tag-list">
+                        {% for player in ladder_match.team_a.players %}
+                            <span class="pick-tag">{{ player }}</span>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="surface-card nested-card ladder-team-card {% if ladder_match.my_side == 'B' %}is-current{% endif %}">
+                    <strong>队伍 B</strong>
+                    <p class="meta-text">{{ ladder_match.team_b.label }}</p>
+                    <div class="tag-list prep-tag-list">
+                        {% for player in ladder_match.team_b.players %}
+                            <span class="pick-tag">{{ player }}</span>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% if ladder_match.state == 'pending_accept' %}
+                <section class="surface-card nested-card ladder-bp-card">
+                    <h3>确认比赛</h3>
+                    <p class="meta-text">当前已确认 {{ ladder_match.acceptance.confirmed_count }} / {{ ladder_match.acceptance.total_count }} 人。确认倒计时为 40 秒，所有选手确认后才会开始 BP；若有人拒绝或超时未确认，本次匹配直接失效，不建立 BP。</p>
+                    {% if ladder_match.acceptance.confirmed_players %}
+                        <div class="tag-list prep-tag-list">
+                            {% for player in ladder_match.acceptance.confirmed_players %}
+                                <span class="pick-tag">已确认：{{ player }}</span>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                    {% if ladder_match.acceptance.pending_players %}
+                        <p class="meta-text">等待确认：{{ ladder_match.acceptance.pending_players|join(' / ') }}</p>
+                    {% endif %}
+                    <div class="hero-actions compact-actions">
+                        {% if ladder_match.acceptance.can_accept %}
+                            <form method="post" action="/ladder/matches/{{ ladder_match.id }}/accept">
+                                <input type="hidden" name="mode" value="{{ ladder_mode }}">
+                                <button class="primary-button" type="submit">确认比赛</button>
+                            </form>
+                        {% elif ladder_match.acceptance.my_confirmed %}
+                            <span class="status-badge success">你已确认</span>
+                        {% endif %}
+                        {% if ladder_match.acceptance.can_reject %}
+                            <form method="post" action="/ladder/matches/{{ ladder_match.id }}/reject">
+                                <input type="hidden" name="mode" value="{{ ladder_mode }}">
+                                <button class="ghost-button danger" type="submit">拒绝比赛</button>
+                            </form>
+                        {% endif %}
+                    </div>
+                </section>
+            {% endif %}
+            <section class="surface-card nested-card ladder-bp-card">
+                <h3>BP 状态</h3>
+                <p class="meta-text">{{ ladder_match.bp_help }}</p>
+                <div class="ladder-bp-columns">
+                    <div>
+                        <strong>队伍 A</strong>
+                        <div class="tag-list prep-tag-list">
+                            {% if ladder_match.bp.ban.A %}
+                                {{ commander_ui.commander_badge(ladder_match.bp.ban.A, 'Ban: ') }}
+                            {% else %}
+                                <span class="pick-tag">Ban: -</span>
+                            {% endif %}
+                            {% if ladder_match.bp.pick.A %}
+                                {{ commander_ui.commander_badge(ladder_match.bp.pick.A, 'Pick: ') }}
+                            {% else %}
+                                <span class="pick-tag">Pick: -</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div>
+                        <strong>队伍 B</strong>
+                        <div class="tag-list prep-tag-list">
+                            {% if ladder_match.bp.ban.B %}
+                                {{ commander_ui.commander_badge(ladder_match.bp.ban.B, 'Ban: ') }}
+                            {% else %}
+                                <span class="pick-tag">Ban: -</span>
+                            {% endif %}
+                            {% if ladder_match.bp.pick.B %}
+                                {{ commander_ui.commander_badge(ladder_match.bp.pick.B, 'Pick: ') }}
+                            {% else %}
+                                <span class="pick-tag">Pick: -</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% if ladder_match.can_submit_bp %}
+                    <form method="post" action="/ladder/matches/{{ ladder_match.id }}/bp" class="stack-form">
+                        <input type="hidden" name="mode" value="{{ ladder_mode }}">
+                        {% if ladder_match.bp_selection_mode == 'single' %}
+                            <div class="ladder-radio-grid">
+                                {% for option in ladder_match.bp_choices %}
+                                    <label class="checkbox-pill">
+                                        <input type="radio" name="choice" value="{{ option.value }}" {% if loop.first %}checked{% endif %}>
+                                        {{ commander_ui.commander_option_label(option.label) }}
+                                    </label>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <div class="checkbox-grid ladder-commander-grid">
+                                {% for option in ladder_match.bp_choices %}
+                                    <label class="checkbox-pill">
+                                        <input type="checkbox" name="choices" value="{{ option.value }}">
+                                        {{ commander_ui.commander_option_label(option.label) }}
+                                    </label>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        <button class="primary-button" type="submit">{{ ladder_match.bp_action_label }}</button>
+                    </form>
+                {% endif %}
+            </section>
+            <section class="surface-card nested-card ladder-bp-card">
+                <h3>Replay 结算</h3>
+                {% if ladder_match.ready_to_upload %}
+                    <p class="meta-text">比赛完成后直接上传 replay 自动判定胜负并更新天梯分。文件会规范化落到 rank 文件夹，不参与赛事归档。</p>
+                    <form method="post" action="/ladder/matches/{{ ladder_match.id }}/replay" enctype="multipart/form-data" class="stack-form">
+                        <input type="hidden" name="mode" value="{{ ladder_mode }}">
+                        <label>
+                            <span>上传 .SC2Replay</span>
+                            <input name="replay_file" type="file" accept=".SC2Replay" required>
+                        </label>
+                        <button class="primary-button" type="submit">上传 replay 并结算</button>
+                    </form>
+                    {% if ladder_match.can_request_admin_review %}
+                        <form method="post" action="/ladder/matches/{{ ladder_match.id }}/admin-review" class="stack-form">
+                            <input type="hidden" name="mode" value="{{ ladder_mode }}">
+                            <button class="ghost-button" type="submit">申请管理员介入</button>
+                        </form>
+                    {% endif %}
+                {% else %}
+                    <p class="muted-copy">当前阶段尚未到可上传 replay 的时间点。</p>
+                {% endif %}
+            </section>
+        {% else %}
+            <h2>当前没有正在进行的天梯比赛</h2>
+            <p class="muted-copy">开始匹配后，这里会展示你的队伍、地图、BP 状态和 replay 结算入口。</p>
+        {% endif %}
+    </article>
+</div>

@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<section class="dashboard-hero">
+    <div>
+        <p class="eyebrow">SC2 Battle</p>
+        <h1>赛事积分排行榜</h1>
+        <p class="muted-copy">所有获得赛事积分的玩家排名。</p>
+    </div>
+    <div class="hero-actions">
+        <a class="ghost-button" href="/hub">返回入口</a>
+        <a class="ghost-button" href="/dashboard">赛事大厅</a>
+    </div>
+</section>
+
+<section class="surface-card main-panel">
+    <div class="table-scroll">
+        {% if leaderboard %}
+        <table class="data-table" style="line-height:2.4;">
+            <thead>
+                <tr>
+                    <th>排名</th>
+                    <th>玩家</th>
+                    <th>赛事积分</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for entry in leaderboard %}
+                    <tr>
+                        <td style="vertical-align:middle;">#{{ entry.rank }}</td>
+                        <td>
+                            <span style="display:inline-flex;align-items:center;gap:8px;">
+                                {{ render_user_avatar_html(entry, 44) | safe }}
+                                {% if entry.game_nickname %}{{ render_user_nickname_html(entry, 30) | safe }}{% else %}{{ entry.username }}{% endif %}
+                            </span>
+                        </td>
+                        <td>{{ entry.points }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="muted-copy">暂无玩家获得赛事积分。</p>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}

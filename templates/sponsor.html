@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>赞助支持 — SC2 Battle</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/style.css">
+<style>
+    .sponsor-hero {
+        text-align: center;
+        padding: 2.5rem 1.5rem 1.5rem;
+    }
+    .sponsor-hero h1 {
+        font-size: 2rem;
+        color: var(--ink-1);
+        margin-bottom: 0.5rem;
+    }
+    .sponsor-hero .subtitle {
+        color: var(--ink-2);
+        font-size: 0.95rem;
+        max-width: 500px;
+        margin: 0 auto;
+        line-height: 1.7;
+    }
+    .sponsor-qr-grid {
+        max-width: 640px;
+        margin: 0 auto;
+        padding: 1.5rem 1.5rem 3rem;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1.5rem;
+    }
+    .sponsor-qr-card {
+        background: var(--paper-strong);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-lg);
+        padding: 1.5rem;
+        text-align: center;
+        box-shadow: 0 2px 12px rgba(40, 24, 9, 0.06);
+    }
+    .sponsor-qr-card h2 {
+        font-size: 1.15rem;
+        color: var(--ink-1);
+        margin-bottom: 0.3rem;
+    }
+    .sponsor-qr-card .qr-label {
+        font-size: 0.82rem;
+        color: var(--ink-2);
+        margin-bottom: 1rem;
+    }
+    .sponsor-qr-card img {
+        width: 100%;
+        max-width: 240px;
+        height: auto;
+        border-radius: var(--radius-md);
+        border: 1px solid var(--line);
+        display: block;
+        margin: 0 auto;
+    }
+    .sponsor-thanks {
+        text-align: center;
+        padding: 1rem 1.5rem 3rem;
+        color: var(--ink-2);
+        font-size: 0.9rem;
+        line-height: 1.8;
+    }
+    .sponsor-thanks strong {
+        color: var(--accent);
+    }
+    .back-link {
+        display: block;
+        text-align: center;
+        padding: 1rem 0 3rem;
+        font-size: 0.9rem;
+    }
+    .back-link a {
+        color: var(--accent);
+        text-decoration: none;
+    }
+    .back-link a:hover {
+        text-decoration: underline;
+    }
+    @media (max-width: 480px) {
+        .sponsor-qr-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+</head>
+<body>
+    <div class="page-shell">
+        <header class="topbar">
+            <a class="brand" href="/hub">
+                <span class="brand-mark">S</span>
+                <span><strong>SC2 Battle</strong></span>
+            </a>
+            <div class="topbar-actions">
+                <a class="ghost-button" href="/novel">📖 同人小说</a>
+                <a class="ghost-button" href="/update">⚡ 更新补丁</a>
+                <a class="ghost-button" href="/sponsor">❤️ 赞助开发</a>
+                <a class="ghost-button" href="/hub">🏠 赛事大厅</a>
+            </div>
+        </header>
+
+        <main>
+            <section class="sponsor-hero">
+                <p class="eyebrow">Support Development</p>
+                <h1>❤️ 赞助网页开发</h1>
+                <p class="subtitle">感谢你的支持！每一份赞助都将用于服务器维护、域名续费与功能开发。扫描下方任意二维码即可赞助。</p>
+            </section>
+
+            <div class="sponsor-qr-grid">
+                <div class="sponsor-qr-card">
+                    <h2>💚 微信支付</h2>
+                    <p class="qr-label">WeChat Pay</p>
+                    <img src="/payment/wechat.png" alt="微信收款码">
+                </div>
+                <div class="sponsor-qr-card">
+                    <h2>💙 支付宝</h2>
+                    <p class="qr-label">Alipay</p>
+                    <img src="/payment/alipay.jpg" alt="支付宝收款码">
+                </div>
+            </div>
+
+            <div class="sponsor-thanks">
+                <p>每一份心意都是<strong>SC2 Battle</strong>继续前行的动力。</p>
+                <p>赞助时请备注你的游戏 ID，我们会在后续更新中致谢！</p>
+            </div>
+
+            <div class="back-link">
+                <a href="javascript:history.back()">← 返回上一页</a>
+                &nbsp;·&nbsp;
+                <a href="/sponsor-thanks">❤️ 赞助感谢墙</a>
+                &nbsp;·&nbsp;
+                <a href="/hub">返回赛事大厅</a>
+            </div>
+        </main>
+    </div>
+</body>
+</html>

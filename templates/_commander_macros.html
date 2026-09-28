@@ -1,0 +1,49 @@
+{% macro commander_badge(commander_name, prefix='', variant='thumb') -%}
+    {% if commander_name %}
+        {% set asset = commander_asset(commander_name, variant) %}
+        <span class="pick-tag commander-tag {% if asset.has_image %}has-image{% endif %}">
+            {% if asset.has_image %}
+                <span class="commander-tag-thumb" style="background-image: url('{{ asset.image_url if variant == 'full' else asset.thumb_url }}');"></span>
+            {% endif %}
+            <span>{{ prefix }}{{ commander_name }}</span>
+        </span>
+    {% else %}
+        <span class="pick-tag">{{ prefix }}-</span>
+    {% endif %}
+{%- endmacro %}
+
+{% macro commander_option_label(commander_name, variant='thumb') -%}
+    {% if commander_name %}
+        {% set asset = commander_asset(commander_name, variant) %}
+        <span class="commander-option-inline {% if asset.has_image %}has-image{% endif %}">
+            {% if asset.has_image %}
+                <span class="commander-option-thumb" style="background-image: url('{{ asset.image_url if variant == 'full' else asset.thumb_url }}');"></span>
+            {% endif %}
+            <span>{{ commander_name }}</span>
+        </span>
+    {% else %}
+        <span>-</span>
+    {% endif %}
+{%- endmacro %}
+
+{% macro commander_showcase(commander_name, title='', subtitle='') -%}
+    {% if commander_name %}
+        {% set asset = commander_asset(commander_name, 'full') %}
+        <article class="commander-showcase {% if asset.has_image %}has-image{% endif %}">
+            {% if asset.has_image %}
+                <div class="commander-showcase-art" style="background-image: url('{{ asset.image_url }}');"></div>
+            {% else %}
+                <div class="commander-showcase-art commander-showcase-placeholder"></div>
+            {% endif %}
+            <div class="commander-showcase-copy">
+                {% if title %}
+                    <p class="eyebrow">{{ title }}</p>
+                {% endif %}
+                <h4>{{ commander_name }}</h4>
+                {% if subtitle %}
+                    <p class="meta-text">{{ subtitle }}</p>
+                {% endif %}
+            </div>
+        </article>
+    {% endif %}
+{%- endmacro %}

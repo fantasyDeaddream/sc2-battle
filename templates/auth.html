@@ -1,0 +1,89 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<section class="auth-layout">
+    <div class="hero-card">
+        <p class="eyebrow">SC2 Battle</p>
+        <h1>登录后进入赛事大厅。</h1>
+        <p class="hero-copy">支持赛事创建、报名、签到与对阵管理。</p>
+        <div class="hero-actions compact-actions">
+            <a class="ghost-button" href="/novel">📖 同人小说（无需登录）</a>
+            <a class="ghost-button" href="/update">⚡ 风暴对决更新（无需登录）</a>
+            <a class="ghost-button" href="/sponsor">❤️ 赞助网页开发</a>
+        </div>
+        <div class="hero-grid">
+            <div>
+                <strong>登录</strong>
+                <span>登录 / 注册</span>
+            </div>
+            <div>
+                <strong>大厅</strong>
+                <span>赛事大厅与简介</span>
+            </div>
+            <div>
+                <strong>设置</strong>
+                <span>赛事设置创建</span>
+            </div>
+            <div>
+                <strong>管理</strong>
+                <span>赛事信息 / 报名 / 对阵表</span>
+            </div>
+        </div>
+    </div>
+
+    <section class="auth-card">
+        <div class="auth-switch" role="tablist" aria-label="认证切换">
+            <button class="auth-tab" type="button" data-panel="login">登录</button>
+            <button class="auth-tab" type="button" data-panel="register">注册</button>
+        </div>
+
+        {% if auth_error %}
+            <div class="alert alert-error">{{ auth_error }}</div>
+        {% endif %}
+
+        <div class="auth-panels">
+            <form class="auth-panel" method="post" action="/auth/login" data-panel="login">
+                <h2>账号登录</h2>
+                <label>
+                    <span>账号</span>
+                    <input name="username" type="text" placeholder="输入账号" value="{{ form_data.username or '' }}" required>
+                </label>
+                <label>
+                    <span>密码</span>
+                    <input name="password" type="password" placeholder="输入密码" required>
+                </label>
+                <label class="checkbox-row">
+                    <input name="remember_login" type="checkbox">
+                    <span>记住登录，下次自动进入赛事大厅</span>
+                </label>
+                <button class="primary-button" type="submit">进入平台</button>
+            </form>
+
+            <form class="auth-panel" method="post" action="/auth/register" data-panel="register">
+                <h2>创建账号</h2>
+                <label>
+                    <span>账号</span>
+                    <input name="username" type="text" placeholder="3-24 个字符，不含空格" value="{{ form_data.register_username or '' }}" required>
+                </label>
+                <label>
+                    <span>游戏内昵称</span>
+                    <input name="game_nickname" type="text" placeholder="用于 replay 胜负识别" value="{{ form_data.register_game_nickname or '' }}" required>
+                </label>
+                <label>
+                    <span>密码</span>
+                    <input name="password" type="password" placeholder="至少 6 位" required>
+                </label>
+                <label>
+                    <span>确认密码</span>
+                    <input name="confirm_password" type="password" placeholder="再次输入密码" required>
+                </label>
+                <label class="checkbox-row">
+                    <input name="remember_login" type="checkbox">
+                    <span>注册后保持登录</span>
+                </label>
+                <button class="primary-button" type="submit">注册并进入</button>
+            </form>
+        </div>
+    </section>
+</section>
+{% endblock %}

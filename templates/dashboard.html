@@ -1,0 +1,126 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<section class="dashboard-hero">
+    <div>
+        <p class="eyebrow">SC2 Battle</p>
+        <h1>赛事大厅</h1>
+        <p class="muted-copy">查看公开赛事、报名参赛或创建新赛事。</p>
+    </div>
+    <div class="hero-actions">
+        <a class="ghost-button {% if current_view == 'all' %}is-active-filter{% endif %}" href="/dashboard">全部比赛</a>
+        <a class="ghost-button {% if current_view == 'mine' %}is-active-filter{% endif %}" href="/dashboard?view=mine">我参与的赛事</a>
+        <a class="ghost-button {% if current_view == 'managed' %}is-active-filter{% endif %}" href="/dashboard?view=managed">我管理的赛事</a>
+        <a class="ghost-button {% if current_view == 'history' %}is-active-filter{% endif %}" href="/dashboard?view=history">历史比赛</a>
+        <a class="ghost-button" href="/tools/replay">测试 replay 读取</a>
+        <a class="ghost-button" href="/account/settings">账户设置与装扮</a>
+        {% if current_user.tournament_points %}
+            <span class="status-badge success">赛事积分：{{ current_user.tournament_points }}</span>
+        {% endif %}
+        <a class="ghost-button" href="/leaderboard">积分排行榜</a>
+        <a class="ghost-button" href="/shop">积分商城</a>
+        {% if is_superadmin %}
+            <a class="ghost-button" href="/admin">后台管理</a>
+        {% endif %}
+        <a class="primary-button" href="/tournaments/new">创建比赛</a>
+    </div>
+</section>
+
+<section class="surface-card dashboard-scroll-panel">
+    {% if dashboard_error %}
+        <div class="alert alert-error">{{ dashboard_error }}</div>
+    {% endif %}
+    {% if dashboard_success %}
+        <div class="alert alert-success">{{ dashboard_success }}</div>
+    {% endif %}
+    {% if current_view == 'all' %}
+        <form method="post" action="/dashboard/join-by-invite" class="signup-form invite-code-form">
+            <label>
+                <span>私密赛事邀请码</span>
+                <div class="hero-actions compact-actions">
+                    <input name="invite_code" type="text" placeholder="输入 6 位邀请码" maxlength="6" style="width:200px;" required>
+                    <button class="primary-button" type="submit">加入赛事</button>
+                </div>
+            </label>
+        </form>
+    {% endif %}
+    <div class="card-grid tournament-grid">
+        {% for tournament in tournaments %}
+            <article class="surface-card tournament-card nested-card">
+                <div class="card-head">
+                    <div>
+                        <p class="eyebrow">{{ tournament.format_label }} / {{ tournament.stage_label }}</p>
+                        <h2>{{ tournament.name }}</h2>
+                    </div>
+                    <div class="status-stack">
+                        <span class="status-badge">{{ tournament.phase_label }}</span>
+                        {% if tournament.managed %}
+                            <span class="status-badge">管理中</span>
+                        {% endif %}
+                        {% if tournament.joined %}
+                            <span class="status-badge success">已报名</span>
+                        {% endif %}
+                        {% if tournament.is_points_event %}
+                            <span class="status-badge success">积分赛事 · 冠军 {{ tournament.points_for_champion }} 分</span>
+                        {% endif %}
+                        {% if tournament.is_private %}
+                            <span class="status-badge warning">私密</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <p class="muted-copy">{{ tournament.description_excerpt }}</p>
+                <dl class="info-pairs compact">
+                    <div>
+                        <dt>主办方</dt>
+                        <dd>{{ tournament.creator_name }}</dd>
+                    </div>
+                    <div>
+                        <dt>比赛时间</dt>
+                        <dd>{{ tournament.start_time }} {{ tz_label }}</dd>
+                    </div>
+                    <div>
+                        <dt>签到时间</dt>
+                        <dd>{{ tournament.checkin_time }} {{ tz_label }}</dd>
+                    </div>
+                    <div>
+                        <dt>当前报名</dt>
+                        <dd>{{ tournament.participant_count }} 人</dd>
+                    </div>
+                    <div>
+                        <dt>已签到</dt>
+                        <dd>{{ tournament.checked_in_count }} 人</dd>
+                    </div>
+                </dl>
+                <div class="card-footer wrap-actions">
+                    <span class="meta-text">
+                        {% if tournament.hide_bracket_until_publish and not tournament.bracket_published %}
+                            对阵表将在主办方公布后开放
+                        {% else %}
+                            对阵表可按报名状态查看
+                        {% endif %}
+                    </span>
+                    <div class="hero-actions compact-actions">
+                        <a class="ghost-button" href="/tournaments/{{ tournament.id }}?tab=info">查看并报名</a>
+                        {% if tournament.creator_can_delete %}
+                            <form method="post" action="/tournaments/{{ tournament.id }}/delete">
+                                <input type="hidden" name="source_view" value="{{ current_view }}">
+                                <button class="ghost-button danger" type="submit">删除赛事</button>
+                            </form>
+                        {% elif is_superadmin %}
+                            <form method="post" action="/admin/tournaments/{{ tournament.id }}/delete">
+                                <button class="ghost-button danger" type="submit">删除赛事</button>
+                            </form>
+                        {% endif %}
+                    </div>
+                </div>
+            </article>
+        {% else %}
+            <article class="surface-card empty-card">
+                <h2>{{ empty_title }}</h2>
+                <p class="muted-copy">{{ empty_message }}</p>
+                <a class="primary-button" href="/tournaments/new">创建第一场比赛</a>
+            </article>
+        {% endfor %}
+    </div>
+</section>
+{% endblock %}

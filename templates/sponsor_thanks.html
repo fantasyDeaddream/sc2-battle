@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>赞助感谢 — SC2 Battle</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/style.css">
+<style>
+    .thanks-hero { text-align:center; padding:2.5rem 1.5rem 1.5rem; }
+    .thanks-hero h1 { font-size:2rem; color:var(--ink-1); margin-bottom:0.5rem; }
+    .thanks-hero .subtitle { color:var(--ink-2); font-size:0.95rem; }
+    .sponsor-grid { max-width:700px; margin:0 auto; padding:1rem 1.5rem 3rem; display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:0.75rem; }
+    .sponsor-card { display:flex; align-items:center; gap:0.6rem; background:var(--paper-strong); border:1px solid var(--line); border-radius:var(--radius-md); padding:0.7rem 1rem; box-shadow:0 1px 6px rgba(40,24,9,0.04); }
+    .sponsor-card img { width:32px;height:32px;border-radius:6px;object-fit:cover;flex-shrink:0; }
+    .sponsor-card strong { font-size:0.92rem; color:var(--ink-1); }
+    .back-link { text-align:center; padding:1rem 0 3rem; font-size:0.9rem; }
+    .back-link a { color:var(--accent); text-decoration:none; }
+    .back-link a:hover { text-decoration:underline; }
+</style>
+</head>
+<body>
+<div class="page-shell">
+    <header class="topbar">
+        <a class="brand" href="/hub"><span class="brand-mark">S</span><span><strong>SC2 Battle</strong></span></a>
+        <div class="topbar-actions">
+            <a class="ghost-button" href="/novel">📖 同人小说</a>
+            <a class="ghost-button" href="/update">⚡ 更新补丁</a>
+            <a class="ghost-button" href="/sponsor">❤️ 赞助开发</a>
+            <a class="ghost-button" href="/hub">🏠 赛事大厅</a>
+        </div>
+    </header>
+    <main>
+        <section class="thanks-hero">
+            <p class="eyebrow">Sponsor Wall</p>
+            <h1>❤️ 赞助感谢墙</h1>
+            <p class="subtitle">感谢以下玩家对 SC2 Battle 开发的支持！</p>
+        </section>
+        <div class="sponsor-grid">
+            {% if sponsors %}
+                {% for s in sponsors %}
+                <div class="sponsor-card">
+                    {{ render_user_avatar_html(s, 32) | safe }}
+                    <strong>{{ s.game_nickname or s.username }}</strong>
+                </div>
+                {% endfor %}
+            {% else %}
+                <p style="text-align:center;color:var(--ink-2);grid-column:1/-1;padding:2rem 0;">暂无赞助记录。成为第一位赞助者吧！</p>
+            {% endif %}
+        </div>
+        <div class="back-link">
+            <a href="/sponsor">← 返回赞助页</a> · <a href="/hub">返回赛事大厅</a>
+        </div>
+    </main>
+</div>
+</body>
+</html>

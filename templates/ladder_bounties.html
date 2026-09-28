@@ -1,0 +1,207 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<section class="dashboard-hero ladder-hero">
+    <div>
+        <p class="eyebrow">Ladder Bounties</p>
+        <h1>天梯悬赏</h1>
+        <p class="muted-copy">浏览当前悬赏、提交自己在天梯中打出的 replay，并由天梯管理员进行人工审核。</p>
+    </div>
+    <div class="hero-actions">
+        <a class="ghost-button" href="/ladder">返回天梯</a>
+        <a class="ghost-button" href="#bounty-submit-panel">上交悬赏</a>
+        {% if can_manage_bounties %}
+            <a class="ghost-button" href="#bounty-publish-panel">发布悬赏</a>
+        {% endif %}
+    </div>
+</section>
+
+{% if bounty_error %}
+    <div class="alert alert-error">{{ bounty_error }}</div>
+{% endif %}
+{% if bounty_success %}
+    <div class="alert alert-success">{{ bounty_success }}</div>
+{% endif %}
+
+{% if can_manage_bounties %}
+    <section class="surface-card main-panel" id="bounty-publish-panel">
+        <div class="panel-header">
+            <div>
+                <p class="eyebrow">管理操作</p>
+                <h2>发布悬赏</h2>
+            </div>
+        </div>
+        <form method="post" action="/ladder/bounties/publish" class="stack-form">
+            <label>
+                <span>悬赏名</span>
+                <input name="name" type="text" placeholder="例如：TVP 两矿一波样本征集" required>
+            </label>
+            <label>
+                <span>悬赏名额数</span>
+                <input name="slot_count" type="number" min="1" step="1" value="1" required>
+            </label>
+            <label>
+                <span>悬赏金额</span>
+                <input name="amount" type="text" placeholder="例如：50 元 / 人" required>
+            </label>
+            <label>
+                <span>悬赏内容</span>
+                <textarea name="description" rows="4" placeholder="填写需要什么对局、局面或打法样本。" required></textarea>
+            </label>
+            <button class="primary-button" type="submit">发布悬赏</button>
+        </form>
+    </section>
+{% endif %}
+
+<section class="surface-card main-panel" id="bounty-submit-panel">
+    <div class="panel-header">
+        <div>
+            <p class="eyebrow">提交入口</p>
+            <h2>上交悬赏</h2>
+        </div>
+    </div>
+    {% set submit_ready = bounties|selectattr('can_submit')|list %}
+    {% if not bounties %}
+        <p class="muted-copy">当前还没有可参与的天梯悬赏。</p>
+    {% elif not available_replays %}
+        <p class="muted-copy">你当前用户名目录下还没有可选 replay。先在天梯完成比赛并上传 replay，随后这里会显示可提交文件。</p>
+    {% elif not submit_ready %}
+        <p class="muted-copy">当前没有你可以提交的悬赏。可能是已满额、已撤回，或你已有待审核/已通过的提交。</p>
+    {% else %}
+        <form method="post" action="/ladder/bounties/submit" class="stack-form">
+            <div>
+                <span>选择悬赏</span>
+                <div class="checkbox-grid">
+                    {% for bounty in submit_ready %}
+                        <label class="checkbox-pill">
+                            <input type="radio" name="bounty_id" value="{{ bounty.id }}" {% if loop.first %}checked{% endif %}>
+                            <span>{{ bounty.name }} · {{ bounty.valid_count }}/{{ bounty.slot_count }} · {{ bounty.amount }}</span>
+                        </label>
+                    {% endfor %}
+                </div>
+            </div>
+            <div>
+                <span>选择自己已保存的 replay</span>
+                <div class="checkbox-grid ladder-commander-grid">
+                    {% for replay in available_replays %}
+                        <label class="checkbox-pill">
+                            <input type="checkbox" name="replay_files" value="{{ replay.name }}">
+                            <span>{{ replay.name }} · {{ replay.size_kb }} KB · {{ replay.modified_at }}</span>
+                        </label>
+                    {% endfor %}
+                </div>
+            </div>
+            <button class="primary-button" type="submit">上交悬赏</button>
+        </form>
+    {% endif %}
+</section>
+
+<section class="card-grid tournament-grid">
+    {% for bounty in bounties %}
+        <article class="surface-card tournament-card nested-card">
+            <div class="card-head">
+                <div>
+                    <p class="eyebrow">天梯悬赏</p>
+                    <h2>{{ bounty.name }}</h2>
+                </div>
+                <div class="status-stack">
+                    <span class="status-badge {% if bounty.status == 'revoked' %}danger{% elif bounty.is_full %}success{% else %}warning{% endif %}">{{ bounty.status_label }}</span>
+                    <span class="status-badge">{{ bounty.valid_count }}/{{ bounty.slot_count }}</span>
+                    <span class="status-badge">{{ bounty.amount }}</span>
+                </div>
+            </div>
+            <p class="muted-copy">{{ bounty.description }}</p>
+            <p class="meta-text">发布者：{{ bounty.created_by_username }} · 发布时间：{{ bounty.created_at }}</p>
+            {% if bounty.revoked_reason %}
+                <p class="meta-text">撤回说明：{{ bounty.revoked_reason }}</p>
+            {% endif %}
+
+            {% if bounty.current_submission %}
+                <section class="surface-card nested-card">
+                    <h3>我的提交</h3>
+                    <p class="meta-text">状态：{{ bounty.current_submission.status_label }} · 更新时间：{{ bounty.current_submission.updated_at }}</p>
+                    {% if bounty.current_submission.invalid_reason %}
+                        <div class="alert alert-error">无效原因：{{ bounty.current_submission.invalid_reason }}</div>
+                    {% endif %}
+                    {% if bounty.current_submission.selected_files %}
+                        <div class="tag-list prep-tag-list">
+                            {% for file_name in bounty.current_submission.selected_files %}
+                                <span class="pick-tag">{{ file_name }}</span>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </section>
+            {% endif %}
+
+            {% if can_manage_bounties and bounty.status == 'active' %}
+                <section class="surface-card nested-card">
+                    <h3>管理该悬赏</h3>
+                    <form method="post" action="/ladder/bounties/{{ bounty.id }}/revoke" class="stack-form">
+                        <label>
+                            <span>撤回原因</span>
+                            <input name="revoke_reason" type="text" maxlength="200" placeholder="可选，不填则使用默认说明">
+                        </label>
+                        <button class="ghost-button danger" type="submit">撤回悬赏</button>
+                    </form>
+                </section>
+            {% endif %}
+
+            {% if can_manage_bounties %}
+                <section class="surface-card nested-card">
+                    <h3>提交审核</h3>
+                    {% if bounty.submissions %}
+                        {% for submission in bounty.submissions %}
+                            <article class="surface-card nested-card">
+                                <div class="match-headline">
+                                    <span>{{ submission.username }}{% if submission.game_nickname %} · {{ submission.game_nickname }}{% endif %}</span>
+                                    <span>{{ submission.status_label }}</span>
+                                </div>
+                                <p class="meta-text">最近更新时间：{{ submission.updated_at }}</p>
+                                {% if submission.selected_files %}
+                                    <div class="tag-list prep-tag-list">
+                                        {% for file_name in submission.selected_files %}
+                                            <span class="pick-tag">{{ file_name }}</span>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                                {% if submission.invalid_reason %}
+                                    <div class="alert alert-error">无效原因：{{ submission.invalid_reason }}</div>
+                                {% endif %}
+                                {% if submission.reviewed_by %}
+                                    <p class="meta-text">审核人：{{ submission.reviewed_by }}{% if submission.reviewed_at %} · {{ submission.reviewed_at }}{% endif %}</p>
+                                {% endif %}
+                                <div class="hero-actions compact-actions">
+                                    <a class="ghost-button" href="/ladder/bounties/submissions/{{ submission.id }}/archive">下载提交归档</a>
+                                </div>
+                                {% if submission.status == 'pending' %}
+                                    <div class="hero-actions compact-actions">
+                                        <form method="post" action="/ladder/bounties/submissions/{{ submission.id }}/review">
+                                            <input type="hidden" name="decision" value="valid">
+                                            <button class="primary-button" type="submit">判定有效</button>
+                                        </form>
+                                    </div>
+                                    <form method="post" action="/ladder/bounties/submissions/{{ submission.id }}/review" class="stack-form">
+                                        <input type="hidden" name="decision" value="invalid">
+                                        <label>
+                                            <span>无效原因</span>
+                                            <input name="invalid_reason" type="text" maxlength="200" placeholder="判定无效时必须填写原因" required>
+                                        </label>
+                                        <button class="ghost-button danger" type="submit">判定无效</button>
+                                    </form>
+                                {% endif %}
+                            </article>
+                        {% endfor %}
+                    {% else %}
+                        <p class="muted-copy">当前还没有用户提交该悬赏。</p>
+                    {% endif %}
+                </section>
+            {% endif %}
+        </article>
+    {% else %}
+        <article class="surface-card empty-card">
+            <h2>暂无悬赏</h2>
+            <p class="muted-copy">等待天梯管理员发布新的样本征集或对局悬赏。</p>
+        </article>
+    {% endfor %}
+</section>
+{% endblock %}

@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>风暴对决 · 更新补丁列表 — Storm Showdown Patch Notes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/style.css">
+<style>
+    .patch-index-hero {
+        text-align: center;
+        padding: 3rem 1.5rem 1.5rem;
+    }
+    .patch-index-hero h1 {
+        font-size: 2rem;
+        color: var(--ink-1);
+        margin-bottom: 0.5rem;
+    }
+    .patch-index-hero .subtitle {
+        color: var(--ink-2);
+        font-size: 0.95rem;
+    }
+    .patch-list {
+        max-width: 740px;
+        margin: 0 auto;
+        padding: 0 1.5rem 3rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+    .patch-card {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        background: var(--paper-strong);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-md);
+        padding: 1.05rem 1.4rem;
+        text-decoration: none;
+        box-shadow: 0 2px 8px rgba(40, 24, 9, 0.06);
+        transition: background 0.18s, border-color 0.18s, box-shadow 0.18s, transform 0.1s;
+    }
+    .patch-card:hover {
+        background: var(--paper);
+        border-color: var(--accent);
+        box-shadow: var(--shadow);
+        transform: translateY(-1px);
+    }
+    .patch-card-date {
+        flex-shrink: 0;
+        width: 64px;
+        text-align: center;
+        color: var(--accent);
+        font-weight: 700;
+        font-size: 1.1rem;
+        line-height: 1.2;
+    }
+    .patch-card-date small {
+        display: block;
+        font-weight: 400;
+        font-size: 0.72rem;
+        color: var(--ink-2);
+    }
+    .patch-card-body {
+        flex: 1;
+        min-width: 0;
+    }
+    .patch-card-body h3 {
+        font-size: 1rem;
+        font-weight: 600;
+        color: var(--ink-1);
+        margin-bottom: 0.15rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .patch-card-body .patch-meta {
+        font-size: 0.82rem;
+        color: var(--ink-2);
+    }
+    .patch-card-arrow {
+        flex-shrink: 0;
+        color: var(--accent);
+        font-size: 1.2rem;
+        opacity: 0.5;
+    }
+    .patch-card:hover .patch-card-arrow {
+        opacity: 1;
+    }
+    .back-link {
+        display: block;
+        text-align: center;
+        padding: 1.5rem 0 3rem;
+        font-size: 0.9rem;
+    }
+    .back-link a {
+        color: var(--accent);
+        text-decoration: none;
+    }
+    .back-link a:hover {
+        text-decoration: underline;
+    }
+</style>
+</head>
+<body>
+    <div class="page-shell">
+        <header class="topbar">
+            <a class="brand" href="/hub">
+                <span class="brand-mark">S</span>
+                <span>
+                    <strong>SC2 Battle</strong>
+                </span>
+            </a>
+            <div class="topbar-actions">
+                <a class="ghost-button" href="/novel">📖 同人小说</a>
+                <a class="ghost-button" href="/update">⚡ 更新补丁</a>
+                <a class="ghost-button" href="/hub">🏠 赛事大厅</a>
+            </div>
+        </header>
+
+        <main>
+            <section class="patch-index-hero">
+                <p class="eyebrow">Storm Showdown · Patch Notes</p>
+                <h1>⚡ 风暴对决更新补丁</h1>
+                <p class="subtitle">选择一个补丁版本，查看详细的平衡性改动与机制调整。</p>
+            </section>
+
+            <div class="patch-list">
+                {% if patches %}
+                    {% for patch in patches %}
+                        <a class="patch-card" href="/update/{{ patch.filename }}">
+                            <div class="patch-card-date">
+                                {{ patch.display_date.split('-')[2] }}<small>{{ patch.display_date.split('-')[0] }}-{{ patch.display_date.split('-')[1] }}</small>
+                            </div>
+                            <div class="patch-card-body">
+                                <h3>{{ patch.title }}</h3>
+                                <span class="patch-meta">补丁版本 · PTR</span>
+                            </div>
+                            <span class="patch-card-arrow">→</span>
+                        </a>
+                    {% endfor %}
+                {% else %}
+                    <p style="text-align: center; color: var(--ink-2); padding: 2rem 0;">暂无可用的补丁版本。</p>
+                {% endif %}
+            </div>
+
+            <div class="back-link">
+                <a href="/hub">← 返回赛事大厅</a>
+            </div>
+        </main>
+    </div>
+</body>
+</html>

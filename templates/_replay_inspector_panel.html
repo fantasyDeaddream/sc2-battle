@@ -1,0 +1,93 @@
+<article class="surface-card main-panel">
+    <div class="panel-header">
+        <div>
+            <p class="eyebrow">Replay</p>
+            <h2>SC2 Replay 解析测试</h2>
+        </div>
+    </div>
+    <p class="muted-copy">当前用于 replay 胜负判定的绑定昵称：{{ current_user_game_nickname or '未绑定' }}</p>
+    <form method="post" action="{{ replay_upload_action }}" enctype="multipart/form-data" class="signup-form">
+        <label>
+            <span>选择 replay 文件</span>
+            <input name="replay_file" type="file" accept=".SC2Replay,.sc2replay" required>
+            <small class="field-hint">上传一个 .SC2Replay 文件，页面会显示基础元数据，并基于当前账号绑定的游戏内昵称自动判断“我方胜利 / 对方胜利”。</small>
+        </label>
+        <div class="form-actions">
+            <button class="primary-button" type="submit">读取 replay 信息</button>
+        </div>
+    </form>
+    {% if replay_error %}
+        <div class="alert alert-error">{{ replay_error }}</div>
+    {% endif %}
+    {% if replay_result %}
+        <div class="rich-block">
+            <p class="eyebrow">最近一次解析</p>
+            <h3>{{ replay_result.filename }}</h3>
+            <dl class="info-pairs compact">
+                <dt>地图</dt>
+                <dd>{{ replay_result.map_name }}</dd>
+                <dt>资料片</dt>
+                <dd>{{ replay_result.expansion }}</dd>
+                <dt>版本</dt>
+                <dd>{{ replay_result.release_string }}</dd>
+                <dt>模式</dt>
+                <dd>{{ replay_result.category }} / {{ replay_result.game_type }}</dd>
+                <dt>速度</dt>
+                <dd>{{ replay_result.speed }}</dd>
+                <dt>大区</dt>
+                <dd>{{ replay_result.region }}</dd>
+                <dt>游戏时长</dt>
+                <dd>{{ replay_result.game_length }}</dd>
+                <dt>真实时长</dt>
+                <dd>{{ replay_result.real_length }}</dd>
+                <dt>开始时间</dt>
+                <dd>{{ replay_result.start_time }}</dd>
+                <dt>结束时间</dt>
+                <dd>{{ replay_result.end_time }}</dd>
+                <dt>胜者</dt>
+                <dd>{{ replay_result.winner_summary }}</dd>
+                <dt>绑定昵称</dt>
+                <dd>{{ replay_result.nickname_verdict.bound_game_nickname or '未绑定' }}</dd>
+                <dt>判定结果</dt>
+                <dd>{{ replay_result.nickname_verdict.label }}</dd>
+                <dt>判定说明</dt>
+                <dd>{{ replay_result.nickname_verdict.detail }}</dd>
+                <dt>观察者</dt>
+                <dd>{{ replay_result.observer_names|join(' / ') if replay_result.observer_names else '无' }}</dd>
+            </dl>
+        </div>
+        <div class="participant-admin-list participant-section">
+            {% for team in replay_result.teams %}
+                <article class="participant-admin-card">
+                    <div class="participant-title">
+                        <strong>{{ team.label }}</strong>
+                        <span class="muted-copy">
+                            {{ team.lineup or '阵容未知' }}
+                            {% if team.is_winner %}
+                                · 胜者
+                            {% endif %}
+                        </span>
+                    </div>
+                    <dl class="info-pairs compact">
+                        <dt>队伍结果</dt>
+                        <dd>{{ team.result }}</dd>
+                    </dl>
+                    <div class="participant-admin-list">
+                        {% for player in team.players %}
+                            <article class="participant-admin-card">
+                                <div class="participant-title">
+                                    <strong>{{ player.name }}</strong>
+                                    <span class="muted-copy">选择种族 {{ player.pick_race }} / 实际种族 {{ player.play_race }}{% if player.matches_bound_game_nickname %} · 已匹配绑定昵称{% endif %}</span>
+                                </div>
+                                <dl class="info-pairs compact">
+                                    <dt>结果</dt>
+                                    <dd>{{ player.result }}</dd>
+                                </dl>
+                            </article>
+                        {% endfor %}
+                    </div>
+                </article>
+            {% endfor %}
+        </div>
+    {% endif %}
+</article>

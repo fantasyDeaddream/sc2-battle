@@ -1,0 +1,242 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<section class="dashboard-hero">
+    <div>
+        <p class="eyebrow">超级管理员后台</p>
+        <h1>SC2 Battle 管理</h1>
+        <p class="muted-copy">删除用户、清理赛事，并查看平台当前数据。</p>
+    </div>
+    <a class="ghost-button" href="/dashboard">返回赛事大厅</a>
+</section>
+
+<section class="surface-card main-panel admin-panel-switcher">
+    <div class="panel-header">
+        <div>
+            <p class="eyebrow">模块切换</p>
+            <h2>选择一个后台模块</h2>
+        </div>
+        <div class="hero-actions compact-actions">
+            <a class="ghost-button {% if active_admin_panel == 'replay' %}is-active-filter{% endif %}" href="/admin?panel=replay">SC2 Replay 解析测试</a>
+            <a class="ghost-button {% if active_admin_panel == 'ladder_reviews' %}is-active-filter{% endif %}" href="/admin?panel=ladder_reviews">等待 sudo 裁定的天梯比赛</a>
+            <a class="ghost-button {% if active_admin_panel == 'users' %}is-active-filter{% endif %}" href="/admin?panel=users">用户列表</a>
+            <a class="ghost-button {% if active_admin_panel == 'tournaments' %}is-active-filter{% endif %}" href="/admin?panel=tournaments">赛事列表</a>
+        </div>
+    </div>
+</section>
+
+<section class="admin-grid">
+    {% if active_admin_panel == 'replay' %}
+        {% set replay_upload_action = '/admin/replay/inspect?panel=replay' %}
+        {% include '_replay_inspector_panel.html' %}
+    {% endif %}
+
+    {% if active_admin_panel == 'ladder_reviews' %}
+    <article class="surface-card main-panel">
+        <div class="panel-header">
+            <div>
+                <p class="eyebrow">Ladder</p>
+                <h2>等待 sudo 裁定的天梯比赛</h2>
+            </div>
+        </div>
+        {% if ladder_admin_reviews %}
+            <div class="table-scroll">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>模式</th>
+                            <th>地图</th>
+                            <th>队伍 A</th>
+                            <th>队伍 B</th>
+                            <th>申请人</th>
+                            <th>申请时间</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for match in ladder_admin_reviews %}
+                            <tr>
+                                <td>{{ match.id }}</td>
+                                <td>{{ match.mode_label }}</td>
+                                <td>{{ match.map_name }}</td>
+                                <td>{{ match.team_a_label }}</td>
+                                <td>{{ match.team_b_label }}</td>
+                                <td>{{ match.requested_by }}</td>
+                                <td>{{ match.requested_at or '-' }}</td>
+                                <td>
+                                    <div class="hero-actions compact-actions">
+                                        <form method="post" action="/admin/ladder/matches/{{ match.id }}/resolve">
+                                            <input type="hidden" name="panel" value="ladder_reviews">
+                                            <input type="hidden" name="winner_side" value="A">
+                                            <button class="primary-button" type="submit">判队伍 A 获胜</button>
+                                        </form>
+                                        <form method="post" action="/admin/ladder/matches/{{ match.id }}/resolve">
+                                            <input type="hidden" name="panel" value="ladder_reviews">
+                                            <input type="hidden" name="winner_side" value="B">
+                                            <button class="ghost-button" type="submit">判队伍 B 获胜</button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td colspan="8">
+                                    <span class="meta-text">{{ match.reason }}</span>
+                                    {% if match.replay_filename or match.replay_saved_path %}
+                                        <br>
+                                        <span class="meta-text">replay：{{ match.replay_filename or '-' }}{% if match.replay_saved_path %} · {{ match.replay_saved_path }}{% endif %}</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <p class="muted-copy">当前没有等待 sudo 裁定的天梯比赛。</p>
+        {% endif %}
+    </article>
+    {% endif %}
+
+    {% if active_admin_panel == 'users' %}
+    <article class="surface-card main-panel">
+        <div class="panel-header">
+            <div>
+                <p class="eyebrow">用户</p>
+                <h2>用户列表</h2>
+            </div>
+            <div>
+                <p class="meta-text">修改积分或赞助状态后点击底部"批量保存"按钮。</p>
+            </div>
+        </div>
+        <form method="post" action="/admin/users/bulk-points" id="bulk-points-form">
+        <input type="hidden" name="panel" value="users">
+        <div class="table-scroll">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>登录名</th>
+                        <th>游戏昵称</th>
+                        <th>身份</th>
+                        <th>赛事积分</th>
+                        <th>兑换积分</th>
+                        <th>赞助</th>
+                        <th>创建赛事</th>
+                        <th>已报名赛事</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in users %}
+                        <tr>
+                            <td>{{ user.username }}</td>
+                            <td>{{ user.game_nickname or '-' }}</td>
+                            <td>
+                                {% if user.is_superadmin %}
+                                    <span class="status-badge success">超级管理员</span>
+                                {% else %}
+                                    <div class="tag-list prep-tag-list">
+                                        <span class="status-badge">普通用户</span>
+                                        {% if user.is_ladder_admin %}
+                                            <span class="status-badge warning">天梯管理员</span>
+                                        {% endif %}
+                                        {% if user.is_tournament_admin %}
+                                            <span class="status-badge success">赛事管理员</span>
+                                        {% endif %}
+                                        {% if user.is_shop_admin %}
+                                            <span class="status-badge">商城管理员</span>
+                                        {% endif %}
+                                    </div>
+                                {% endif %}
+                            </td>
+                            <td><input name="tournament_points_{{ user.id }}" type="number" min="0" value="{{ user.tournament_points }}" style="width:80px;"></td>
+                            <td><input name="exchange_points_{{ user.id }}" type="number" min="0" value="{{ user.exchange_points }}" style="width:80px;"></td>
+                            <td>
+                                <input type="checkbox" name="sponsor_user_{{ user.id }}" value="1" {% if user.is_sponsor %}checked{% endif %} title="赞助用户">
+                            </td>
+                            <td>{{ user.created_tournaments }}</td>
+                            <td>{{ user.joined_tournaments }}</td>
+                            <td>
+                                {% if not user.is_superadmin and user.id != current_user.id %}
+                                    <div class="stack-form">
+                                        <form method="post" action="/admin/users/{{ user.id }}/roles" class="stack-form">
+                                            <input type="hidden" name="panel" value="users">
+                                            <label class="checkbox-pill">
+                                                <input type="checkbox" name="ladder_admin" {% if user.is_ladder_admin %}checked{% endif %}>
+                                                <span>天梯管理员</span>
+                                            </label>
+                                            <label class="checkbox-pill">
+                                                <input type="checkbox" name="tournament_admin" {% if user.is_tournament_admin %}checked{% endif %}>
+                                                <span>赛事管理员</span>
+                                            </label>
+                                            <label class="checkbox-pill">
+                                                <input type="checkbox" name="shop_admin" {% if user.is_shop_admin %}checked{% endif %}>
+                                                <span>商城管理员</span>
+                                            </label>
+                                            <button class="ghost-button" type="submit">保存角色</button>
+                                        </form>
+                                        <form method="post" action="/admin/users/{{ user.id }}/delete">
+                                            <input type="hidden" name="panel" value="users">
+                                            <button class="ghost-button danger" type="submit">删除用户</button>
+                                        </form>
+                                    </div>
+                                {% else %}
+                                    <span class="meta-text">锁定</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="form-actions" style="padding:12px;">
+            <button class="primary-button" type="submit">批量保存</button>
+        </div>
+        </form>
+    </article>
+    {% endif %}
+
+    {% if active_admin_panel == 'tournaments' %}
+    <article class="surface-card main-panel">
+        <div class="panel-header">
+            <div>
+                <p class="eyebrow">赛事</p>
+                <h2>赛事列表</h2>
+            </div>
+        </div>
+        <div class="table-scroll">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>赛事名</th>
+                        <th>主办方</th>
+                        <th>赛制</th>
+                        <th>报名人数</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for tournament in tournaments %}
+                        <tr>
+                            <td>{{ tournament.name }}</td>
+                            <td>{{ tournament.creator_name }}</td>
+                            <td>{{ format_labels[tournament.format_type] }}</td>
+                            <td>{{ tournament.participant_count }}</td>
+                            <td>
+                                <div class="hero-actions compact-actions">
+                                    <a class="ghost-button" href="/tournaments/{{ tournament.id }}?tab=info">查看</a>
+                                    <form method="post" action="/admin/tournaments/{{ tournament.id }}/delete">
+                                        <input type="hidden" name="panel" value="tournaments">
+                                        <button class="ghost-button danger" type="submit">删除赛事</button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </article>
+    {% endif %}
+</section>
+{% endblock %}

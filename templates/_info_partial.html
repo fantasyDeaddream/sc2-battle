@@ -1,0 +1,161 @@
+<div data-bp-partial-target="info-partial">
+{% import '_commander_macros.html' as commander_ui with context %}
+
+{% if stage_status.enabled %}
+    <section class="stage-status-card">
+        <div class="stage-status-head">
+            <div>
+                <p class="eyebrow">阶段切换</p>
+                <h3>{{ stage_status.current_stage_label }}</h3>
+            </div>
+            <div class="stage-pill-row">
+                <span class="status-badge {% if stage_status.current_stage == 1 %}warning{% else %}success{% endif %}">第一阶段：{{ stage_status.stage1_label }}</span>
+                <span class="status-badge {% if stage_status.stage2_started %}success{% elif stage_status.stage2_ready %}warning{% endif %}">第二阶段：{{ stage_status.stage2_label }}</span>
+            </div>
+        </div>
+        <p class="muted-copy stage-status-copy">{{ stage_status.summary }}</p>
+    </section>
+{% endif %}
+
+{% if show_my_matches_nav and tournament.started %}
+    <section class="stage-status-card prep-entry-card">
+        <div class="stage-status-head">
+            <div>
+                <p class="eyebrow">准备当前比赛</p>
+                <h3>{{ tournament.bp_mode_label }}</h3>
+            </div>
+            <a class="ghost-button" href="/tournaments/{{ tournament.id }}?tab=my_matches">进入准备页面</a>
+        </div>
+        <p class="muted-copy stage-status-copy">查看最近的对局信息、双方准备状态与当前 BP 进度。</p>
+    </section>
+{% endif %}
+
+{% if manager_preparation_overview %}
+    <section class="stage-status-card prep-entry-card">
+        <div class="stage-status-head">
+            <div>
+                <p class="eyebrow">管理员观察面板</p>
+                <h3>当前进行中的准备与 BP</h3>
+            </div>
+            <a class="ghost-button" href="/tournaments/{{ tournament.id }}?tab=bracket">查看完整对阵表</a>
+        </div>
+        <div class="prep-game-history">
+            {% for entry in manager_preparation_overview %}
+                <article class="prep-game-card">
+                    <div class="match-headline">
+                        <span>{{ entry.match.round_label }}</span>
+                        <span>{{ entry.preparation.status_label }}</span>
+                    </div>
+                    <p class="meta-text">{{ entry.match.player1_name }} vs {{ entry.match.player2_name }} · {{ entry.match.series_label }}</p>
+                    <p class="meta-text">{{ entry.preparation.summary }}</p>
+                    {% if entry.preparation.turn_clock.active %}
+                        <div class="prep-clock-row">
+                            <span class="status-badge warning">本手限时 {{ entry.preparation.turn_clock.duration_seconds }} 秒</span>
+                            <span class="prep-countdown" data-countdown-seconds="{{ entry.preparation.turn_clock.remaining_seconds }}">{{ entry.preparation.turn_clock.remaining_seconds }}s</span>
+                        </div>
+                    {% endif %}
+                    {% if entry.preparation.map_bp %}
+                        <div class="tag-list prep-tag-list">
+                            {% for game in entry.preparation.map_bp.games %}
+                                <span class="map-tag">第 {{ game.game_number }} 局 · {{ game.map_name }}</span>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                    {% if entry.preparation.evo_bp %}
+                        <div class="prep-game-history">
+                            {% for game in entry.preparation.evo_bp.games %}
+                                <article class="prep-game-card {% if game.is_current %}is-current{% endif %}">
+                                    <div class="match-headline">
+                                        <span>第 {{ game.game_number }} 局</span>
+                                        <span>{{ game.map_name }}</span>
+                                    </div>
+                                    <p class="meta-text">{{ game.status_label }} · {{ game.choice_label }}</p>
+                                    {% if game.game_number > 1 and game.loser_name and game.winner_name %}
+                                        <p class="meta-text">败者：{{ game.loser_name }} · 胜者：{{ game.winner_name }}</p>
+                                    {% endif %}
+                                </article>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                    {% if entry.preparation.commander_bp %}
+                        <div class="prep-game-history">
+                            {% for game in entry.preparation.commander_bp.games %}
+                                <article class="prep-game-card {% if game.is_current %}is-current{% endif %}">
+                                    <div class="match-headline">
+                                        <span>第 {{ game.game_number }} 局</span>
+                                        <span>{{ game.map_name }}</span>
+                                    </div>
+                                    {% if game.score_limit %}
+                                        <p class="meta-text">分数上限：{{ game.score_limit }}</p>
+                                    {% endif %}
+                                    <div class="prep-game-side-grid">
+                                        <div>
+                                            <strong>A · {{ game.side_names.A }}</strong>
+                                            <div class="tag-list prep-tag-list">
+                                                {% if game.bans.A %}
+                                                    {{ commander_ui.commander_badge(game.bans.A, 'Ban: ') }}
+                                                {% endif %}
+                                                {% for commander in game.picks.A %}
+                                                    {{ commander_ui.commander_badge(commander) }}
+                                                {% endfor %}
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <strong>B · {{ game.side_names.B }}</strong>
+                                            <div class="tag-list prep-tag-list">
+                                                {% if game.bans.B %}
+                                                    {{ commander_ui.commander_badge(game.bans.B, 'Ban: ') }}
+                                                {% endif %}
+                                                {% for commander in game.picks.B %}
+                                                    {{ commander_ui.commander_badge(commander) }}
+                                                {% endfor %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </article>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                    {% if entry.preparation.bracket_conquest_bp %}
+                        <div class="prep-game-history">
+                            {% for game in entry.preparation.bracket_conquest_bp.games %}
+                                <article class="prep-game-card {% if game.is_current %}is-current{% endif %}">
+                                    <div class="match-headline">
+                                        <span>第 {{ game.game_number }} 局</span>
+                                        <span>{{ game.map_name }}</span>
+                                    </div>
+                                    <div class="prep-game-side-grid">
+                                        {% for side in ['A', 'B'] %}
+                                            <div>
+                                                <strong>{{ side }} · {{ game.side_names[side] }}</strong>
+                                                <div class="tag-list prep-tag-list">
+                                                    {% if game.pick[side] %}
+                                                        {{ commander_ui.commander_badge(game.pick[side], '出战: ') }}
+                                                    {% else %}
+                                                        <span class="pick-tag">出战: 待选择</span>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+                                    {% if game.winner_name %}
+                                        <p class="meta-text">本局胜者：{{ game.winner_name }}</p>
+                                    {% endif %}
+                                </article>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                    {% if entry.preparation.replay_result_enabled and entry.preparation.replay_upload %}
+                        {% set replay_view = entry.preparation.replay_upload %}
+                        {% set replay_show_upload_form = false %}
+                        {% set replay_match_id = entry.match.id if manager else None %}
+                        {% set replay_source_tab = 'bracket' %}
+                        {% set replay_preparation_status = entry.preparation.status %}
+                        {% include '_replay_series_panel.html' %}
+                    {% endif %}
+                </article>
+            {% endfor %}
+        </div>
+    </section>
+{% endif %}
+</div>

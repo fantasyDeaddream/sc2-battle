@@ -1,0 +1,566 @@
+{% import '_commander_macros.html' as commander_ui with context %}
+
+<div
+    data-bp-partial-target="my-matches-panel"
+    data-bp-next-sync-url="{{ my_matches_bp_sync.url if my_matches_bp_sync else '' }}"
+    data-bp-next-sync-key="{{ my_matches_bp_sync.key if my_matches_bp_sync else '' }}"
+>
+    <article class="surface-card main-panel">
+        <div class="panel-header">
+            <div>
+                <p class="eyebrow">我的对阵</p>
+                <h2>当前赛事中的个人赛程</h2>
+            </div>
+            <div class="status-stack">
+                {% if my_matches_state.current_match %}
+                    <span class="status-badge warning">当前对手：{{ my_matches_state.current_match.opponent_name }}</span>
+                {% else %}
+                    <span class="status-badge success">暂无待打对局</span>
+                {% endif %}
+            </div>
+        </div>
+
+        <p class="muted-copy">{{ my_matches_state.summary }}</p>
+
+        {% if my_matches_state.replay_upload_error %}
+            <div class="alert alert-error">{{ my_matches_state.replay_upload_error }}</div>
+        {% endif %}
+        {% if my_matches_state.replay_upload_success %}
+            <div class="alert alert-success">{{ my_matches_state.replay_upload_success }}</div>
+        {% endif %}
+
+        {% if my_matches_state.preparation %}
+            <section class="prepare-match-panel">
+                <div class="panel-header compact-header">
+                    <div>
+                        <p class="eyebrow">准备当前比赛</p>
+                        <h3>{{ my_matches_state.preparation.bp_mode_label }}</h3>
+                    </div>
+                    <span class="status-badge {% if my_matches_state.preparation.status == 'ready_to_play' %}success{% elif my_matches_state.preparation.status == 'bp_in_progress' %}warning{% endif %}">{{ my_matches_state.preparation.status_label }}</span>
+                </div>
+
+                <div class="prep-ready-grid">
+                    {% for player in my_matches_state.preparation.players %}
+                        <article class="prep-player-card {% if player.ready %}is-ready{% endif %}">
+                            <div class="match-headline">
+                                <span>{{ player.seat_label }} · 固定 {{ player.fixed_side }}</span>
+                                <span>当前 {{ player.current_side }}</span>
+                            </div>
+                            <strong>{{ player.name }}</strong>
+                            <div class="tag-list prep-tag-list">
+                                <span class="status-badge {% if player.ready %}success{% else %}warning{% endif %}">{{ '已准备' if player.ready else '未准备' }}</span>
+                                {% if player.next_game_ready %}
+                                    <span class="status-badge success">已点下一局</span>
+                                {% endif %}
+                            </div>
+                        </article>
+                    {% endfor %}
+                </div>
+
+                <p class="muted-copy">{{ my_matches_state.preparation.summary }}</p>
+
+                {% if my_matches_state.preparation.turn_clock.active %}
+                    <div class="prep-clock-row">
+                        <span class="status-badge warning">本手限时 {{ my_matches_state.preparation.turn_clock.duration_seconds }} 秒</span>
+                        <span class="prep-countdown" data-countdown-seconds="{{ my_matches_state.preparation.turn_clock.remaining_seconds }}">{{ my_matches_state.preparation.turn_clock.remaining_seconds }}s</span>
+                    </div>
+                {% endif %}
+
+                {% if my_matches_state.preparation.can_ready %}
+                    <form method="post" action="/tournaments/{{ tournament.id }}/matches/{{ my_matches_state.current_match.id }}/prepare" class="inline-form">
+                        <button class="primary-button" type="submit">准备比赛</button>
+                    </form>
+                {% endif %}
+
+                {% if my_matches_state.preparation.map_bp %}
+                    <section class="prep-mode-card">
+                        <div class="match-headline">
+                            <span>地图池 BP</span>
+                            {% if my_matches_state.preparation.map_bp.current_step %}
+                                <span>{{ my_matches_state.preparation.map_bp.current_step.actor_name }} · {{ my_matches_state.preparation.map_bp.current_step.label }}</span>
+                            {% else %}
+                                <span>地图顺序已确定</span>
+                            {% endif %}
+                        </div>
+                        <div class="tag-list prep-tag-list">
+                            {% for game in my_matches_state.preparation.map_bp.games %}
+                                <span class="map-tag">第 {{ game.game_number }} 局 · {{ game.map_name }}</span>
+                            {% endfor %}
+                        </div>
+                        {% if my_matches_state.preparation.map_bp.actions %}
+                            <div class="prep-recent-list">
+                                {% for action in my_matches_state.preparation.map_bp.actions %}
+                                    <div class="prep-recent-item">
+                                        <strong>{{ action.actor }}</strong>
+                                        <span>{{ '禁图' if action.type == 'ban' else '定图' }}</span>
+                                        <span>{{ action.map_name }}</span>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        {% if my_matches_state.preparation.map_bp.can_act %}
+                            <div class="prep-action-grid">
+                                {% for map_name in my_matches_state.preparation.map_bp.available_maps %}
+                                    <form method="post" action="/tournaments/{{ tournament.id }}/matches/{{ my_matches_state.current_match.id }}/bp/action">
+                                        <input type="hidden" name="action_value" value="{{ map_name }}">
+                                        <button class="ghost-button" type="submit">{{ map_name }}</button>
+                                    </form>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </section>
+                {% endif %}
+
+                {% if my_matches_state.preparation.evo_bp %}
+                    <section class="prep-mode-card">
+                        <div class="match-headline">
+                            <span>EVO 小局选择</span>
+                            <span>第 {{ my_matches_state.preparation.evo_bp.current_game_number }} 局 · 地图：{{ my_matches_state.preparation.evo_bp.current_game_map_name }}</span>
+                        </div>
+                        {% if my_matches_state.preparation.evo_bp.current_game_number == 1 %}
+                            <p class="meta-text">第 1 局不进行小局 BP，直接开打。</p>
+                        {% elif my_matches_state.preparation.evo_bp.current_choice %}
+                            <p class="meta-text">上局败者：{{ my_matches_state.preparation.evo_bp.current_choice.loser_name }} · 上局胜者：{{ my_matches_state.preparation.evo_bp.current_choice.winner_name }}</p>
+                            {% if my_matches_state.preparation.evo_bp.current_choice.choice_label %}
+                                <p class="meta-text">当前已确定：{{ my_matches_state.preparation.evo_bp.current_choice.choice_label }}</p>
+                            {% else %}
+                                <p class="meta-text">当前等待上局败者选择本局 EVO 赛制。</p>
+                            {% endif %}
+                        {% endif %}
+                        {% if my_matches_state.preparation.evo_bp.can_act %}
+                            <div class="prep-action-grid">
+                                {% for option in my_matches_state.preparation.evo_bp.action_options %}
+                                    <form method="post" action="/tournaments/{{ tournament.id }}/matches/{{ my_matches_state.current_match.id }}/bp/action">
+                                        <input type="hidden" name="action_value" value="{{ option.value }}">
+                                        <button class="{% if option.selected %}primary-button{% else %}ghost-button{% endif %}" type="submit">{{ option.label }}</button>
+                                    </form>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        <div class="prep-game-history">
+                            {% for game in my_matches_state.preparation.evo_bp.games %}
+                                <article class="prep-game-card {% if game.is_current %}is-current{% endif %}">
+                                    <div class="match-headline">
+                                        <span>第 {{ game.game_number }} 局</span>
+                                        <span>{{ game.map_name }}</span>
+                                    </div>
+                                    <p class="meta-text">{{ game.status_label }} · {{ game.choice_label }}</p>
+                                    {% if game.game_number > 1 and game.loser_name and game.winner_name %}
+                                        <p class="meta-text">败者：{{ game.loser_name }} · 胜者：{{ game.winner_name }}</p>
+                                    {% endif %}
+                                </article>
+                            {% endfor %}
+                        </div>
+                    </section>
+                {% endif %}
+
+                {% if my_matches_state.preparation.ladder_bp %}
+                    <section class="prep-mode-card">
+                        <div class="match-headline">
+                            <span>第 {{ my_matches_state.preparation.ladder_bp.current_game.game_number }} 局</span>
+                            <span>地图：{{ my_matches_state.preparation.ladder_bp.current_game.map_name }}</span>
+                        </div>
+                        <p class="meta-text">当前阶段：{{ my_matches_state.preparation.ladder_bp.phase_label }}</p>
+                        <div class="prep-ready-grid prep-board-grid">
+                            {% for side in ['A', 'B'] %}
+                                <article class="prep-player-card">
+                                    <div class="match-headline">
+                                        <span>{{ side }}</span>
+                                        <span>{{ my_matches_state.preparation.ladder_bp.side_names[side] }}</span>
+                                    </div>
+                                    <div class="tag-list prep-tag-list">
+                                        {% for commander in my_matches_state.preparation.ladder_bp.current_game.commanders[side] %}
+                                            {{ commander_ui.commander_badge(commander) }}
+                                        {% endfor %}
+                                        {% if my_matches_state.preparation.ladder_bp.current_game.ban[side] is not none %}
+                                            {% if my_matches_state.preparation.ladder_bp.current_game.ban[side] %}
+                                                {{ commander_ui.commander_badge(my_matches_state.preparation.ladder_bp.current_game.ban[side], 'Ban: ') }}
+                                            {% else %}
+                                                <span class="pick-tag">Ban: 不禁用</span>
+                                            {% endif %}
+                                        {% endif %}
+                                        {% if my_matches_state.preparation.ladder_bp.current_game.pick[side] %}
+                                            {{ commander_ui.commander_badge(my_matches_state.preparation.ladder_bp.current_game.pick[side], 'Pick: ') }}
+                                        {% endif %}
+                                    </div>
+                                </article>
+                            {% endfor %}
+                        </div>
+                        {% if my_matches_state.preparation.ladder_bp.can_submit_pool %}
+                            <form method="post" action="/tournaments/{{ tournament.id }}/matches/{{ my_matches_state.current_match.id }}/bp/action" class="stack-form">
+                                <div class="checkbox-grid ladder-commander-grid">
+                                {% for option in my_matches_state.preparation.ladder_bp.pool_options %}
+                                    <label class="checkbox-pill">
+                                        <input type="checkbox" name="action_values" value="{{ option.value }}" {% if option.selected %}checked{% endif %}>
+                                        {{ commander_ui.commander_option_label(option.value) }}
+                                    </label>
+                                {% endfor %}
+                                </div>
+                                <button class="primary-button" type="submit">提交 3 位指挥官</button>
+                            </form>
+                        {% endif %}
+                        {% if my_matches_state.preparation.ladder_bp.can_submit_ban %}
+                            <div class="prep-action-grid">
+                                {% for option in my_matches_state.preparation.ladder_bp.ban_options %}
+                                    <form method="post" action="/tournaments/{{ tournament.id }}/matches/{{ my_matches_state.current_match.id }}/bp/action">
+                                        <input type="hidden" name="action_value" value="{{ option.value }}">
+                                        <button class="ghost-button" type="submit">{{ commander_ui.commander_option_label(option.value) if option.value else option.label }}</button>
+                                    </form>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        {% if my_matches_state.preparation.ladder_bp.can_submit_pick %}
+                            <div class="prep-action-grid">
+                                {% for option in my_matches_state.preparation.ladder_bp.pick_options %}
+                                    <form method="post" action="/tournaments/{{ tournament.id }}/matches/{{ my_matches_state.current_match.id }}/bp/action">
+                                        <input type="hidden" name="action_value" value="{{ option.value }}">
+                                        <button class="ghost-button" type="submit">{{ commander_ui.commander_option_label(option.value) }}</button>
+                                    </form>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        {% if my_matches_state.preparation.ladder_bp.can_advance %}
+                            <form method="post" action="/tournaments/{{ tournament.id }}/matches/{{ my_matches_state.current_match.id }}/bp/advance" class="inline-form">
+                                <button class="ghost-button" type="submit">下一局</button>
+                            </form>
+                        {% endif %}
+                        {% if my_matches_state.preparation.ladder_bp.waiting_next_names %}
+                            <p class="meta-text">等待下一局确认：{{ my_matches_state.preparation.ladder_bp.waiting_next_names | join('、') }}</p>
+                        {% endif %}
+                        <div class="prep-game-history">
+                            {% for game in my_matches_state.preparation.ladder_bp.games %}
+                                <article class="prep-game-card {% if game.is_current %}is-current{% endif %}">
+                                    <div class="match-headline">
+                                        <span>第 {{ game.game_number }} 局</span>
+                                        <span>{{ game.map_name }}</span>
+                                    </div>
+                                    <div class="prep-game-side-grid">
+                                        {% for side in ['A', 'B'] %}
+                                            <div>
+                                                <strong>{{ side }} · {{ game.side_names[side] }}</strong>
+                                                <div class="tag-list prep-tag-list">
+                                                    {% for commander in game.commanders[side] %}
+                                                        {{ commander_ui.commander_badge(commander) }}
+                                                    {% endfor %}
+                                                    {% if game.ban[side] is not none %}
+                                                        {% if game.ban[side] %}
+                                                            {{ commander_ui.commander_badge(game.ban[side], 'Ban: ') }}
+                                                        {% else %}
+                                                            <span class="pick-tag">Ban: 不禁用</span>
+                                                        {% endif %}
+                                                    {% endif %}
+                                                    {% if game.pick[side] %}
+                                                        {{ commander_ui.commander_badge(game.pick[side], 'Pick: ') }}
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+                                </article>
+                            {% endfor %}
+                        </div>
+                    </section>
+                {% endif %}
+
+                {% if my_matches_state.preparation.conquest_bp %}
+                    <section class="prep-mode-card">
+                        <div class="match-headline">
+                            <span>指挥官1v1征服者</span>
+                            <span>第 {{ my_matches_state.preparation.conquest_bp.current_game.game_number }} 局 · 地图：{{ my_matches_state.preparation.conquest_bp.current_game.map_name }}</span>
+                        </div>
+                        <p class="meta-text">当前阶段：{{ my_matches_state.preparation.conquest_bp.phase_label }}。本场双方各自预选 {{ my_matches_state.preparation.conquest_bp.first_to }} 位指挥官，某位指挥官一旦获胜，后续小局该方不能再使用它。</p>
+                        <div class="prep-ready-grid prep-board-grid">
+                            {% for side in ['A', 'B'] %}
+                                <article class="prep-player-card">
+                                    <div class="match-headline">
+                                        <span>{{ side }}</span>
+                                        <span>{{ my_matches_state.preparation.conquest_bp.side_names[side] }}</span>
+                                    </div>
+                                    <div class="tag-list prep-tag-list">
+                                        {% for commander in my_matches_state.preparation.conquest_bp.pool_submissions[side] %}
+                                            {{ commander_ui.commander_badge(commander) }}
+                                        {% endfor %}
+                                        {% if my_matches_state.preparation.conquest_bp.current_game.pick[side] %}
+                                            {{ commander_ui.commander_badge(my_matches_state.preparation.conquest_bp.current_game.pick[side], '本局出战: ') }}
+                                        {% endif %}
+                                        {% for commander in my_matches_state.preparation.conquest_bp.locked[side] %}
+                                            {{ commander_ui.commander_badge(commander, '已锁定: ') }}
+                                        {% endfor %}
+                                    </div>
+                                </article>
+                            {% endfor %}
+                        </div>
+                        {% if my_matches_state.preparation.conquest_bp.can_submit_pool %}
+                            <form method="post" action="/tournaments/{{ tournament.id }}/matches/{{ my_matches_state.current_match.id }}/bp/action" class="stack-form">
+                                <div class="checkbox-grid ladder-commander-grid">
+                                    {% for option in my_matches_state.preparation.conquest_bp.pool_options %}
+                                        <label class="checkbox-pill">
+                                            <input type="checkbox" name="action_values" value="{{ option.value }}" {% if option.selected %}checked{% endif %}>
+                                            {{ commander_ui.commander_option_label(option.value) }}
+                                        </label>
+                                    {% endfor %}
+                                </div>
+                                <button class="primary-button" type="submit">提交征服者预选池</button>
+                            </form>
+                        {% endif %}
+                        {% if my_matches_state.preparation.conquest_bp.can_submit_pick %}
+                            <form method="post" action="/tournaments/{{ tournament.id }}/matches/{{ my_matches_state.current_match.id }}/bp/action" class="stack-form">
+                                <div class="checkbox-grid ladder-commander-grid">
+                                    {% for option in my_matches_state.preparation.conquest_bp.pick_options %}
+                                        <label class="checkbox-pill">
+                                            <input type="checkbox" name="action_values" value="{{ option.value }}">
+                                            {{ commander_ui.commander_option_label(option.value) }}
+                                        </label>
+                                    {% endfor %}
+                                </div>
+                                <button class="primary-button" type="submit">确认出战指挥官</button>
+                            </form>
+                        {% endif %}
+                        <div class="prep-game-history">
+                            {% for game in my_matches_state.preparation.conquest_bp.games %}
+                                <article class="prep-game-card {% if game.is_current %}is-current{% endif %}">
+                                    <div class="match-headline">
+                                        <span>第 {{ game.game_number }} 局</span>
+                                        <span>{{ game.map_name }}</span>
+                                    </div>
+                                    <div class="prep-game-side-grid">
+                                        {% for side in ['A', 'B'] %}
+                                            <div>
+                                                <strong>{{ side }} · {{ my_matches_state.preparation.conquest_bp.side_names[side] }}</strong>
+                                                <div class="tag-list prep-tag-list">
+                                                    {% if game.pick[side] %}
+                                                        {{ commander_ui.commander_badge(game.pick[side], '出战: ') }}
+                                                    {% else %}
+                                                        <span class="pick-tag">出战: 待选择</span>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+                                    {% if game.winner_name %}
+                                        <p class="meta-text">本局胜者：{{ game.winner_name }}</p>
+                                    {% endif %}
+                                </article>
+                            {% endfor %}
+                        </div>
+                    </section>
+                {% endif %}
+
+                {% if my_matches_state.preparation.commander_bp %}
+                    <section class="prep-mode-card">
+                        <div class="match-headline">
+                            <span>第 {{ my_matches_state.preparation.commander_bp.current_game.game_number }} 局</span>
+                            <span>地图：{{ my_matches_state.preparation.commander_bp.current_game.map_name }}</span>
+                        </div>
+                        <div class="prep-ready-grid prep-board-grid">
+                            <article class="prep-player-card">
+                                <div class="match-headline">
+                                    <span>A</span>
+                                    <span>总分 {{ my_matches_state.preparation.commander_bp.pick_totals.A }}</span>
+                                </div>
+                                <strong>{{ my_matches_state.preparation.commander_bp.side_names.A }}</strong>
+                                <div class="tag-list prep-tag-list">
+                                    {% if my_matches_state.preparation.commander_bp.current_game.bans.A %}
+                                        {{ commander_ui.commander_badge(my_matches_state.preparation.commander_bp.current_game.bans.A, 'Ban: ') }}
+                                    {% endif %}
+                                    {% for commander in my_matches_state.preparation.commander_bp.current_game.picks.A %}
+                                        {{ commander_ui.commander_badge(commander) }}
+                                    {% endfor %}
+                                </div>
+                            </article>
+                            <article class="prep-player-card">
+                                <div class="match-headline">
+                                    <span>B</span>
+                                    <span>总分 {{ my_matches_state.preparation.commander_bp.pick_totals.B }}</span>
+                                </div>
+                                <strong>{{ my_matches_state.preparation.commander_bp.side_names.B }}</strong>
+                                <div class="tag-list prep-tag-list">
+                                    {% if my_matches_state.preparation.commander_bp.current_game.bans.B %}
+                                        {{ commander_ui.commander_badge(my_matches_state.preparation.commander_bp.current_game.bans.B, 'Ban: ') }}
+                                    {% endif %}
+                                    {% for commander in my_matches_state.preparation.commander_bp.current_game.picks.B %}
+                                        {{ commander_ui.commander_badge(commander) }}
+                                    {% endfor %}
+                                </div>
+                            </article>
+                        </div>
+                        {% if my_matches_state.preparation.commander_bp.current_game.score_limit %}
+                            <p class="meta-text">当前分数上限：{{ my_matches_state.preparation.commander_bp.current_game.score_limit }}</p>
+                        {% endif %}
+                        {% if my_matches_state.preparation.commander_bp.current_step %}
+                            <p class="meta-text">当前步骤：{{ my_matches_state.preparation.commander_bp.current_step.actor_name }} · {{ my_matches_state.preparation.commander_bp.current_step.label }}</p>
+                        {% endif %}
+                        {% if my_matches_state.preparation.commander_bp.pending_choice %}
+                            <div class="prep-pending-row">
+                                <span class="pick-tag">已预选：{{ my_matches_state.preparation.commander_bp.pending_choice_label }}</span>
+                                {% if my_matches_state.preparation.commander_bp.can_confirm %}
+                                    <form method="post" action="/tournaments/{{ tournament.id }}/matches/{{ my_matches_state.current_match.id }}/bp/action" class="inline-form">
+                                        <input type="hidden" name="action_mode" value="confirm">
+                                        <button class="primary-button" type="submit">确定提交</button>
+                                    </form>
+                                {% endif %}
+                            </div>
+                        {% endif %}
+                        {% if my_matches_state.preparation.commander_bp.can_act %}
+                            <div class="prep-action-grid">
+                                {% for option in my_matches_state.preparation.commander_bp.action_options %}
+                                    <form method="post" action="/tournaments/{{ tournament.id }}/matches/{{ my_matches_state.current_match.id }}/bp/action">
+                                        <input type="hidden" name="action_mode" value="select">
+                                        <input type="hidden" name="action_value" value="{{ option.value }}">
+                                        <button class="{% if option.selected %}primary-button{% else %}ghost-button{% endif %}" type="submit" {% if option.disabled %}disabled{% endif %}>{{ option.label }}</button>
+                                    </form>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        {% if my_matches_state.preparation.commander_bp.can_advance %}
+                            <form method="post" action="/tournaments/{{ tournament.id }}/matches/{{ my_matches_state.current_match.id }}/bp/advance" class="inline-form">
+                                <button class="ghost-button" type="submit">下一局</button>
+                            </form>
+                        {% endif %}
+                        <div class="prep-game-history">
+                            {% for game in my_matches_state.preparation.commander_bp.games %}
+                                <article class="prep-game-card {% if game.is_current %}is-current{% endif %}">
+                                    <div class="match-headline">
+                                        <span>第 {{ game.game_number }} 局</span>
+                                        <span>{{ game.map_name }}</span>
+                                    </div>
+                                    {% if game.score_limit %}
+                                        <p class="meta-text">分数上限：{{ game.score_limit }}</p>
+                                    {% endif %}
+                                    <div class="prep-game-side-grid">
+                                        <div>
+                                            <strong>A · {{ game.side_names.A }}</strong>
+                                            <div class="tag-list prep-tag-list">
+                                                {% if game.bans.A %}
+                                                    {{ commander_ui.commander_badge(game.bans.A, 'Ban: ') }}
+                                                {% endif %}
+                                                {% for commander in game.picks.A %}
+                                                    {{ commander_ui.commander_badge(commander) }}
+                                                {% endfor %}
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <strong>B · {{ game.side_names.B }}</strong>
+                                            <div class="tag-list prep-tag-list">
+                                                {% if game.bans.B %}
+                                                    {{ commander_ui.commander_badge(game.bans.B, 'Ban: ') }}
+                                                {% endif %}
+                                                {% for commander in game.picks.B %}
+                                                    {{ commander_ui.commander_badge(commander) }}
+                                                {% endfor %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </article>
+                            {% endfor %}
+                        </div>
+                    </section>
+                {% endif %}
+
+                {% if my_matches_state.preparation.replay_upload %}
+                    {% set replay_view = my_matches_state.preparation.replay_upload %}
+                    {% set replay_show_upload_form = true %}
+                    {% set replay_match_id = my_matches_state.current_match.id %}
+                    {% set replay_source_tab = 'my_matches' %}
+                    {% set replay_preparation_status = my_matches_state.preparation.status %}
+                    {% include '_replay_series_panel.html' %}
+                {% endif %}
+
+                {% if my_matches_state.preparation.recent_matches %}
+                    <section class="prep-mode-card">
+                        <div class="panel-header compact-header">
+                            <div>
+                                <p class="eyebrow">最近对局</p>
+                                <h3>最近三场相关对局</h3>
+                            </div>
+                        </div>
+                        <div class="prep-recent-list">
+                            {% for match in my_matches_state.preparation.recent_matches %}
+                                <div class="prep-recent-item">
+                                    <strong>{{ match.round_label }}</strong>
+                                    <span>{{ match.opponent_name }}</span>
+                                    <span>{{ match.series_label }}</span>
+                                    <span>{{ match.result_label }}</span>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </section>
+                {% endif %}
+            </section>
+        {% endif %}
+
+        {% if my_matches_state.current_match %}
+            <section class="current-match-spotlight">
+                <div>
+                    <p class="eyebrow">当前待打</p>
+                    <h3>{{ my_matches_state.current_match.round_label }}</h3>
+                    <p class="meta-text">{{ my_matches_state.current_match.bracket_label }} · {{ my_matches_state.current_match.series_label }}</p>
+                </div>
+                <div class="my-match-scoreline">
+                    <strong>{{ registration.nickname }}</strong>
+                    <span>vs</span>
+                    <strong>{{ my_matches_state.current_match.opponent_name }}</strong>
+                </div>
+                {% if my_matches_state.current_match.can_report and my_matches_state.current_match.id %}
+                    <form class="score-report-form spotlight-form" method="post" action="/tournaments/{{ tournament.id }}/matches/{{ my_matches_state.current_match.id }}/report">
+                        <input type="hidden" name="source_tab" value="my_matches">
+                        <div class="score-report-grid">
+                            <label>
+                                <span>{{ registration.nickname }}</span>
+                                <input name="score1" type="number" min="0" value="0" required>
+                            </label>
+                            <label>
+                                <span>{{ my_matches_state.current_match.opponent_name }}</span>
+                                <input name="score2" type="number" min="0" value="0" required>
+                            </label>
+                        </div>
+                        <button class="ghost-button" type="submit">汇报比分</button>
+                    </form>
+                {% elif my_matches_state.current_match.replay_result_enabled %}
+                    <p class="meta-text">当前赛事已启用逐局 replay 自动判负，请在上方准备面板上传本局 replay。</p>
+                {% endif %}
+            </section>
+        {% endif %}
+
+        <div class="my-match-list">
+            {% for match in my_matches_state.matches %}
+                <article class="my-match-card {% if match.status == 'completed' %}is-complete{% endif %}">
+                    <div class="match-headline">
+                        <span>{{ match.bracket_label }}</span>
+                        <span>{{ match.result_label }}</span>
+                    </div>
+                    <h3>{{ match.round_label }}</h3>
+                    <div class="score-duel">
+                        <div class="score-side">
+                            <strong>{{ registration.nickname }}</strong>
+                            <span>{{ match.my_score if match.status == 'completed' else '-' }}</span>
+                        </div>
+                        <div class="score-side">
+                            <strong>{{ match.opponent_name }}</strong>
+                            <span>{{ match.opponent_score if match.status == 'completed' else '-' }}</span>
+                        </div>
+                    </div>
+                    <p class="meta-text">{{ match.series_label }}{% if match.status == 'completed' %} · 已结束{% else %} · 待进行{% endif %}</p>
+                    {% if match.can_report and match.id %}
+                        <form class="score-report-form" method="post" action="/tournaments/{{ tournament.id }}/matches/{{ match.id }}/report">
+                            <input type="hidden" name="source_tab" value="my_matches">
+                            <div class="score-report-grid">
+                                <label>
+                                    <span>{{ registration.nickname }}</span>
+                                    <input name="score1" type="number" min="0" value="0" required>
+                                </label>
+                                <label>
+                                    <span>{{ match.opponent_name }}</span>
+                                    <input name="score2" type="number" min="0" value="0" required>
+                                </label>
+                            </div>
+                            <button class="ghost-button" type="submit">汇报比分</button>
+                        </form>
+                    {% endif %}
+                </article>
+            {% else %}
+                <div class="empty-inline">当前还没有和你相关的对局。</div>
+            {% endfor %}
+        </div>
+    </article>
+</div>

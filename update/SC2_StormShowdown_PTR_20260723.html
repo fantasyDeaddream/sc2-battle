@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>风暴对决 · 平衡性改动 — Storm Showdown Balance Update 2026.7.23</title>
+<style>
+:root {
+    --bg-primary: #060608;
+    --bg-secondary: #0e0e14;
+    --bg-card: #14141c;
+    --bg-card-hover: #1a1a26;
+    --text-primary: #d8d0c0;
+    --text-secondary: #988870;
+    --text-heading: #e8e0d0;
+    --accent-gold: #c8a040;
+    --accent-ptr: #e07040;
+    --buff-green: #48c860;
+    --nerf-red: #e05050;
+    --border-subtle: #282830;
+    --border-card: #2a2a35;
+    --shadow-card: 0 2px 16px rgba(0,0,0,.4);
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+    font-family: 'Segoe UI','Noto Sans SC','Microsoft YaHei',sans-serif;
+    background: var(--bg-primary); color: var(--text-primary);
+    line-height: 1.85; overflow-x: hidden;
+}
+.hero {
+    position: relative;
+    background: linear-gradient(180deg, #1a0e08 0%, #0f0a10 30%, #060608 100%);
+    padding: 60px 20px 40px; text-align: center;
+    border-bottom: 1px solid var(--border-subtle); overflow: hidden;
+}
+.hero::before {
+    content: ''; position: absolute; inset: 0;
+    background:
+        radial-gradient(ellipse at 30% 20%, rgba(224,112,64,.12) 0%, transparent 50%),
+        radial-gradient(ellipse at 70% 60%, rgba(200,160,64,.06) 0%, transparent 50%),
+        radial-gradient(ellipse at 50% 100%, rgba(224,112,64,.10) 0%, transparent 40%);
+    pointer-events: none;
+}
+.hero::after {
+    content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 1px;
+    background: linear-gradient(90deg, transparent, var(--accent-ptr), transparent);
+    opacity: .5;
+}
+.hero-badge {
+    display: inline-block; background: var(--accent-ptr); color: #0a0a0f;
+    font-weight: 700; font-size: .7rem; letter-spacing: 3px;
+    padding: 5px 16px; border-radius: 3px; margin-bottom: 14px; text-transform: uppercase;
+}
+.hero h1 { font-size: 2.1rem; color: var(--text-heading); letter-spacing: 2px; margin: 8px 0; }
+.hero h1 .sub { display: block; font-size: .42em; color: var(--text-secondary); font-weight: 400; margin-top: 6px; letter-spacing: 1px; }
+.hero-version { color: var(--text-secondary); font-size: .85rem; margin-top: 10px; }
+.container { max-width: 940px; margin: 0 auto; padding: 0 24px; }
+.section-divider {
+    display: flex; align-items: center; justify-content: center;
+    gap: 16px; margin: 40px 0 24px;
+}
+.section-divider .line {
+    flex: 1; max-width: 120px; height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(224,112,64,.3));
+}
+.section-divider .line:last-child { background: linear-gradient(90deg, rgba(224,112,64,.3), transparent); }
+.section-divider .icon { font-size: 1.3rem; opacity: .6; }
+.section-header { text-align: center; margin: 8px 0 28px; }
+.section-header h2 {
+    display: inline-block; font-size: 1.15rem; letter-spacing: 3px; text-transform: uppercase;
+    padding: 8px 24px; border: 1px solid var(--accent-ptr); border-radius: 4px;
+    color: var(--accent-ptr);
+}
+.note-block {
+    background: var(--bg-card); border: 1px solid var(--border-subtle);
+    border-radius: 8px; padding: 18px 22px; margin: 20px 0;
+}
+.note-block h3 { color: var(--accent-gold); font-size: .95rem; letter-spacing: 1px; margin-bottom: 8px; }
+.note-block p { font-size: .85rem; color: var(--text-secondary); }
+
+/* Buff / Nerf value styles */
+.val-buff { color: var(--buff-green); font-weight: 700; }
+.val-nerf { color: var(--nerf-red); font-weight: 700; }
+.tag-buff { display: inline-block; background: #0f2a0f; color: var(--buff-green); font-size: .68rem; font-weight: 700; padding: 2px 8px; border-radius: 3px; margin-left: 6px; vertical-align: middle; }
+.tag-nerf { display: inline-block; background: #2a0f0f; color: var(--nerf-red); font-size: .68rem; font-weight: 700; padding: 2px 8px; border-radius: 3px; margin-left: 6px; vertical-align: middle; }
+.tag-new { display: inline-block; background: #1a2a1a; color: #40d060; font-size: .68rem; font-weight: 700; padding: 2px 8px; border-radius: 3px; margin-left: 6px; vertical-align: middle; }
+
+.global-card {
+    background: var(--bg-card); border: 1px solid var(--border-card);
+    border-radius: 8px; padding: 20px 24px; margin: 14px 0;
+    border-left: 3px solid var(--accent-gold);
+    transition: border-color .2s, background .2s;
+}
+.global-card:hover { border-color: rgba(200,160,64,.4); background: var(--bg-card-hover); }
+.global-card h3 { font-size: .95rem; color: var(--text-heading); margin-bottom: 8px; letter-spacing: 1px; }
+.global-card ul { list-style: none; padding: 0; }
+.global-card ul li { padding: 4px 0; font-size: .86rem; color: var(--text-secondary); }
+.global-card ul li strong { color: var(--text-primary); }
+.cmdr-card {
+    background: var(--bg-card); border: 1px solid var(--border-card);
+    border-radius: 10px; padding: 0; margin: 18px 0;
+    display: flex; overflow: hidden;
+    transition: border-color .2s, box-shadow .2s;
+    box-shadow: var(--shadow-card);
+}
+.cmdr-card:hover { border-color: rgba(224,112,64,.27); box-shadow: 0 4px 24px rgba(0,0,0,.5); }
+.cmdr-card .cmdr-portrait {
+    flex-shrink: 0; width: 200px; min-height: 240px;
+    background-size: cover; background-position: center top; background-repeat: no-repeat;
+    position: relative; border-right: 1px solid var(--border-subtle);
+}
+.cmdr-card .cmdr-portrait::after {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(180deg, transparent 50%, rgba(6,6,8,.7) 95%, var(--bg-card) 100%);
+}
+.cmdr-card .cmdr-body { flex: 1; padding: 20px 24px; min-width: 0; }
+.cmdr-card .cmdr-body h4 { font-size: 1.05rem; color: var(--text-heading); margin-bottom: 4px; letter-spacing: 1px; }
+.cmdr-card .cmdr-body .cmdr-en { font-size: .78rem; color: var(--text-secondary); font-weight: 400; margin-left: 4px; }
+.cmdr-card .cmdr-body .change-list { list-style: none; padding: 0; margin-top: 10px; }
+.cmdr-card .cmdr-body .change-list li { padding: 5px 0; font-size: .86rem; color: var(--text-secondary); line-height: 1.7; }
+.cmdr-card .cmdr-body .change-list li strong { color: var(--text-primary); }
+.desc-block {
+    background: var(--bg-secondary); border-left: 3px solid var(--accent-ptr);
+    padding: 14px 18px; margin: 10px 0; border-radius: 0 6px 6px 0;
+    font-size: .84rem; color: var(--text-secondary); line-height: 1.8;
+}
+.desc-block strong { color: var(--text-primary); }
+.ptr-summary {
+    background: var(--bg-card); border: 1px solid var(--border-card);
+    border-radius: 10px; padding: 22px 26px; margin: 18px 0;
+}
+.ptr-summary h3 { font-size: .95rem; color: var(--accent-ptr); margin-bottom: 14px; letter-spacing: 1px; }
+.ptr-summary-table { width: 100%; border-collapse: collapse; font-size: .85rem; }
+.ptr-summary-table thead th {
+    padding: 10px 14px; text-align: left; color: var(--accent-ptr);
+    font-weight: 600; letter-spacing: 1px; font-size: .76rem;
+    text-transform: uppercase; border-bottom: 2px solid var(--border-subtle);
+}
+.ptr-summary-table tbody td { padding: 8px 14px; border-bottom: 1px solid rgba(255,255,255,.04); color: var(--text-secondary); }
+.ptr-summary-table tbody tr:hover { background: rgba(224,112,64,.04); }
+.ptr-summary-table .cmdr-name { color: var(--text-primary); font-weight: 600; }
+.site-footer {
+    text-align: center; padding: 36px 20px; color: var(--text-secondary);
+    font-size: .76rem; border-top: 1px solid var(--border-subtle); margin-top: 40px;
+}
+.site-footer p { margin: 4px 0; }
+@media (max-width: 720px) {
+    .hero h1 { font-size: 1.4rem; }
+    .cmdr-card { flex-direction: column; }
+    .cmdr-card .cmdr-portrait {
+        width: 100%; min-height: 180px; max-height: 240px;
+        border-right: none; border-bottom: 1px solid var(--border-subtle);
+    }
+    .container { padding: 0 14px; }
+}
+.cmdr-card, .global-card, .ptr-summary { animation: fadeUp .5s ease both; }
+@keyframes fadeUp {
+    from { opacity:0; transform:translateY(12px); }
+    to { opacity:1; transform:translateY(0); }
+}
+</style>
+</head>
+<body>
+
+<header class="hero">
+    <span class="hero-badge">UPDATE · 更新</span>
+    <h1>风暴对决 · 平衡性改动<span class="sub">Storm Showdown — Co-op PVP Balance Update 2026.7.23</span></h1>
+    <div class="hero-version">星际争霸II 合作模式 PVP · 2v2 周赛赛后改动 2.0 · 2026年7月23日</div>
+</header>
+
+<main class="container">
+
+<div class="note-block">
+    <h3>📋 阅读备注 · Notes</h3>
+    <p>本次改动基于 2v2 周赛第二轮赛后数据分析制定。数值标注 <span class="tag-buff">加强</span> 为增强、<span class="tag-nerf">削弱</span> 为削弱、<span class="tag-new">新增</span> 为新增改动。DS = Direct Strike。</p>
+</div>
+
+<div class="ptr-summary">
+    <h3>本次更新涉及指挥官 · Affected Commanders</h3>
+    <table class="ptr-summary-table">
+    <thead><tr><th>指挥官</th><th>摘要</th></tr></thead>
+    <tbody>
+    <tr><td class="cmdr-name">通用</td><td>英雄赏金Bug修复、数值Bug修复、防空建筑降价</td></tr>
+    <tr><td class="cmdr-name">泰凯斯</td><td>赏金上限调整</td></tr>
+    <tr><td class="cmdr-name">阿巴瑟</td><td>飞龙降价、利维坦触手射程增加</td></tr>
+    <tr><td class="cmdr-name">阿塔尼斯</td><td>凤凰降价</td></tr>
+    <tr><td class="cmdr-name">凯拉克斯</td><td>凤凰降价</td></tr>
+    <tr><td class="cmdr-name">德哈卡</td><td>飞龙降价</td></tr>
+    <tr><td class="cmdr-name">凯瑞甘</td><td>飞龙降价</td></tr>
+    <tr><td class="cmdr-name">蒙斯克</td><td>飞龙降价</td></tr>
+    <tr><td class="cmdr-name">沃拉尊</td><td>海盗船降价、先知降价</td></tr>
+    <tr><td class="cmdr-name">雷诺</td><td>女妖降价、维京与大和提价</td></tr>
+    <tr><td class="cmdr-name">斯旺</td><td>怨灵战机降价</td></tr>
+    <tr><td class="cmdr-name">菲尼克斯</td><td>T2天赋作战效能增强</td></tr>
+    <tr><td class="cmdr-name">泽拉图</td><td>T1/T2天赋增强、精华化身重做、禁用虚空之路</td></tr>
+    <tr><td class="cmdr-name">斯台特曼</td><td>T1天赋艾星冷却与额外艾能增强</td></tr>
+    </tbody>
+    </table>
+</div>
+
+<!-- ═══ 通用改动 ═══ -->
+<div class="section-divider">
+    <span class="line"></span><span class="icon">⚙</span><span class="line"></span>
+</div>
+<div class="section-header"><h2>通用改动 · General Changes</h2></div>
+
+<div class="global-card">
+    <h3>Bug 修复</h3>
+    <ul>
+        <li>修复<strong>英雄赏金</strong>Bug</li>
+        <li>修复<strong>部分数值</strong>Bug</li>
+    </ul>
+</div>
+
+<div class="global-card">
+    <h3>防空建筑降价 · Anti-Air Structure Cost Reduction <span class="tag-buff">加强</span></h3>
+    <p style="font-size:.84rem;color:var(--text-secondary);margin-top:6px;">部分机动型空军价格过高导致实战价值不够，重新计算价格并降低防空成本。</p>
+    <ul style="margin-top:8px;">
+        <li>孢子爬虫：<span class="val-buff">96 矿 → 75 矿</span>（斯旺导弹塔：<span class="val-buff">77 矿 → 75 矿</span>）</li>
+        <li>导弹塔：<span class="val-buff">77 矿 → 50 矿</span></li>
+        <li>光炮：<span class="val-buff">115 矿 → 100 矿</span></li>
+    </ul>
+</div>
+
+<!-- ═══ 指挥官改动 ═══ -->
+<div class="section-divider">
+    <span class="line"></span><span class="icon">⚔</span><span class="line"></span>
+</div>
+<div class="section-header"><h2>指挥官平衡性改动 · Commander Changes</h2></div>
+
+<!-- ─── 泰凯斯 ─── -->
+<div class="cmdr-card">
+    <div class="cmdr-portrait" style="background-image:url('https://raw.githubusercontent.com/fantasyDeaddream/storm-showdown-assets/main/Commander_Figures/Ui_loading_coop_hero_tychus.png')"></div>
+    <div class="cmdr-body">
+        <h4>泰凯斯 <span class="cmdr-en">Tychus</span></h4>
+        <ul class="change-list">
+            <li>赏金上限：<span class="val-buff">2000 矿 / 1000 气 → 500 矿 / 200 气</span> <span class="tag-buff">加强</span></li>
+        </ul>
+    </div>
+</div>
+
+<!-- ─── 阿巴瑟 ─── -->
+<div class="cmdr-card">
+    <div class="cmdr-portrait" style="background-image:url('https://raw.githubusercontent.com/fantasyDeaddream/storm-showdown-assets/main/Commander_Figures/Ui_loading_coop_hero_abathur.png')"></div>
+    <div class="cmdr-body">
+        <h4>阿巴瑟 <span class="cmdr-en">Abathur</span></h4>
+        <ul class="change-list">
+            <li>飞龙价格：<span class="val-buff">56 矿 / 56 气 → 44 矿 / 44 气</span> <span class="tag-buff">加强</span></li>
+            <li>利维坦触手射程：<span class="val-buff">3 → 5</span> <span class="tag-buff">加强</span>（同DS）</li>
+        </ul>
+    </div>
+</div>
+
+<!-- ─── 阿塔尼斯 ─── -->
+<div class="cmdr-card">
+    <div class="cmdr-portrait" style="background-image:url('https://raw.githubusercontent.com/fantasyDeaddream/storm-showdown-assets/main/Commander_Figures/Ui_loading_coop_hero_artanis.png')"></div>
+    <div class="cmdr-body">
+        <h4>阿塔尼斯 <span class="cmdr-en">Artanis</span></h4>
+        <ul class="change-list">
+            <li>凤凰价格：<span class="val-buff">105 矿 / 70 气 → 90 矿 / 60 气</span> <span class="tag-buff">加强</span></li>
+        </ul>
+    </div>
+</div>
+
+<!-- ─── 凯拉克斯 ─── -->
+<div class="cmdr-card">
+    <div class="cmdr-portrait" style="background-image:url('https://raw.githubusercontent.com/fantasyDeaddream/storm-showdown-assets/main/Commander_Figures/Ui_loading_coop_hero_karax.png')"></div>
+    <div class="cmdr-body">
+        <h4>凯拉克斯 <span class="cmdr-en">Karax</span></h4>
+        <ul class="change-list">
+            <li>凤凰价格：<span class="val-buff">105 矿 / 70 气 → 96 矿 / 64 气</span> <span class="tag-buff">加强</span></li>
+        </ul>
+    </div>
+</div>
+
+<!-- ─── 德哈卡 ─── -->
+<div class="cmdr-card">
+    <div class="cmdr-portrait" style="background-image:url('https://raw.githubusercontent.com/fantasyDeaddream/storm-showdown-assets/main/Commander_Figures/Ui_loading_coop_hero_dehaka.png')"></div>
+    <div class="cmdr-body">
+        <h4>德哈卡 <span class="cmdr-en">Dehaka</span></h4>
+        <ul class="change-list">
+            <li>飞龙价格：<span class="val-buff">275 矿 / 150 气 → 180 矿 / 112 气</span> <span class="tag-buff">加强</span></li>
+        </ul>
+    </div>
+</div>
+
+<!-- ─── 凯瑞甘 ─── -->
+<div class="cmdr-card">
+    <div class="cmdr-portrait" style="background-image:url('https://raw.githubusercontent.com/fantasyDeaddream/storm-showdown-assets/main/Commander_Figures/Ui_loading_coop_hero_kerrigan.png')"></div>
+    <div class="cmdr-body">
+        <h4>凯瑞甘 <span class="cmdr-en">Kerrigan</span></h4>
+        <ul class="change-list">
+            <li>飞龙价格：<span class="val-buff">75 矿 / 75 气 → 62 矿 / 62 气</span> <span class="tag-buff">加强</span></li>
+        </ul>
+    </div>
+</div>
+
+<!-- ─── 蒙斯克 ─── -->
+<div class="cmdr-card">
+    <div class="cmdr-portrait" style="background-image:url('https://raw.githubusercontent.com/fantasyDeaddream/storm-showdown-assets/main/Commander_Figures/Ui_loading_coop_hero_mengsk.png')"></div>
+    <div class="cmdr-body">
+        <h4>蒙斯克 <span class="cmdr-en">Mengsk</span></h4>
+        <ul class="change-list">
+            <li>飞龙价格：<span class="val-buff">46 矿 / 46 气 → 36 矿 / 36 气</span> <span class="tag-buff">加强</span></li>
+        </ul>
+    </div>
+</div>
+
+<!-- ─── 沃拉尊 ─── -->
+<div class="cmdr-card">
+    <div class="cmdr-portrait" style="background-image:url('https://raw.githubusercontent.com/fantasyDeaddream/storm-showdown-assets/main/Commander_Figures/Ui_loading_coop_hero_vorazun.png')"></div>
+    <div class="cmdr-body">
+        <h4>沃拉尊 <span class="cmdr-en">Vorazun</span></h4>
+        <ul class="change-list">
+            <li>海盗船价格：<span class="val-buff">128 矿 / 85 气 → 106 矿 / 71 气</span> <span class="tag-buff">加强</span></li>
+            <li>先知价格：<span class="val-buff">122 矿 / 92 气 → 106 矿 / 80 气</span> <span class="tag-buff">加强</span></li>
+        </ul>
+    </div>
+</div>
+
+<!-- ─── 雷诺 ─── -->
+<div class="cmdr-card">
+    <div class="cmdr-portrait" style="background-image:url('https://raw.githubusercontent.com/fantasyDeaddream/storm-showdown-assets/main/Commander_Figures/Ui_loading_coop_hero_raynor.png')"></div>
+    <div class="cmdr-body">
+        <h4>雷诺 <span class="cmdr-en">Raynor</span></h4>
+        <ul class="change-list">
+            <li>女妖价格：<span class="val-buff">135 矿 / 90 气 → 118 矿 / 79 气</span> <span class="tag-buff">加强</span></li>
+            <li>维京价格：<span class="val-nerf">90 矿 / 45 气 → 112 矿 / 56 气</span> <span class="tag-nerf">削弱</span></li>
+            <li>大和价格：<span class="val-nerf">242 矿 / 181 气 → 268 矿 / 201 气</span> <span class="tag-nerf">削弱</span></li>
+        </ul>
+    </div>
+</div>
+
+<!-- ─── 斯旺 ─── -->
+<div class="cmdr-card">
+    <div class="cmdr-portrait" style="background-image:url('https://raw.githubusercontent.com/fantasyDeaddream/storm-showdown-assets/main/Commander_Figures/Ui_loading_coop_hero_swann.png')"></div>
+    <div class="cmdr-body">
+        <h4>斯旺 <span class="cmdr-en">Swann</span></h4>
+        <ul class="change-list">
+            <li>怨灵战机价格：<span class="val-buff">155 矿 / 103 气 → 128 矿 / 85 气</span> <span class="tag-buff">加强</span></li>
+        </ul>
+    </div>
+</div>
+
+<!-- ─── 菲尼克斯 ─── -->
+<div class="cmdr-card">
+    <div class="cmdr-portrait" style="background-image:url('https://raw.githubusercontent.com/fantasyDeaddream/storm-showdown-assets/main/Commander_Figures/Ui_loading_coop_hero_fenix.png')"></div>
+    <div class="cmdr-body">
+        <h4>菲尼克斯 <span class="cmdr-en">Fenix</span></h4>
+        <ul class="change-list">
+            <li>T2天赋「作战效能」减价：<span class="val-buff">20% → 30%</span> <span class="tag-buff">加强</span></li>
+        </ul>
+    </div>
+</div>
+
+<!-- ─── 泽拉图 ─── -->
+<div class="cmdr-card">
+    <div class="cmdr-portrait" style="background-image:url('https://raw.githubusercontent.com/fantasyDeaddream/storm-showdown-assets/main/Commander_Figures/Ui_loading_coop_hero_zeratul.png')"></div>
+    <div class="cmdr-body">
+        <h4>泽拉图 <span class="cmdr-en">Zeratul</span></h4>
+        <ul class="change-list">
+            <li>T1天赋「大师曲光刃」攻速加成：<span class="val-buff">15% → 30%</span> <span class="tag-buff">加强</span></li>
+            <li>T2天赋「黎明使徒」调整为<strong>超级隐身</strong>，持续 <span class="val-buff">5 秒【3.6 秒】</span> <span class="tag-buff">加强</span></li>
+            <li><strong>精华化身</strong>重做：移除退化技能，进化光环修改为直接满Buff（不叠层），<span class="val-buff">+20% 减伤</span>，<span class="val-buff">+60% 攻速</span> <span class="tag-new">新增</span></li>
+            <li>精华化身和形体化身<strong>生命减半</strong>，形体化身<strong>价格降低</strong> <span class="tag-new">新增</span></li>
+            <li>暂时<strong>禁用「虚空之路」天赋</strong> <span class="tag-new">新增</span></li>
+        </ul>
+    </div>
+</div>
+
+<!-- ─── 斯台特曼 ─── -->
+<div class="cmdr-card">
+    <div class="cmdr-portrait" style="background-image:url('https://raw.githubusercontent.com/fantasyDeaddream/storm-showdown-assets/main/Commander_Figures/Ui_loading_coop_hero_stetmann.png')"></div>
+    <div class="cmdr-body">
+        <h4>斯台特曼 <span class="cmdr-en">Stetmann</span></h4>
+        <ul class="change-list">
+            <li>T1天赋「艾星冷却」：冷却时间减少 <span class="val-buff">2 秒 → 4 秒</span>，Gary全技能CD减少 <span class="val-buff">25%</span> <span class="tag-buff">加强</span></li>
+            <li>T1天赋「额外艾能」：加成 <span class="val-buff">16% → 20%</span> <span class="tag-buff">加强</span></li>
+        </ul>
+    </div>
+</div>
+
+</main>
+
+<footer class="site-footer">
+    <p>风暴对决 · Storm Showdown — 星际争霸II 合作模式 PVP 社区平衡项目</p>
+    <p style="opacity:.5">StarCraft® II and all related trademarks are the property of Blizzard Entertainment, Inc. This is a fan-made community balance project.</p>
+    <p style="opacity:.4;margin-top:8px;">—— 2v2 周赛赛后改动 2.0 · 2026.7.23 ——</p>
+</footer>
+
+</body>
+</html>

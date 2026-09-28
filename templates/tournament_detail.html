@@ -1,0 +1,1322 @@
+{% extends 'base.html' %}
+{% import '_commander_macros.html' as commander_ui with context %}
+
+{% block content %}
+<section class="detail-shell">
+    <aside class="surface-card sidebar-card">
+        <div class="sidebar-actions">
+            <a class="ghost-button full-width" href="/dashboard">返回赛事大厅</a>
+        </div>
+        <p class="eyebrow">赛事中心</p>
+        <h1>{{ tournament.name }}</h1>
+        <p class="muted-copy">{{ tournament.phase_label }}</p>
+        <nav class="sidebar-nav">
+            <a class="sidebar-link {% if active_tab == 'info' %}is-active{% endif %}" href="/tournaments/{{ tournament.id }}?tab=info">赛事信息</a>
+            <a class="sidebar-link {% if active_tab == 'signup' %}is-active{% endif %}" href="/tournaments/{{ tournament.id }}?tab=signup">报名参赛</a>
+            {% if show_my_matches_nav %}
+                <a class="sidebar-link {% if active_tab == 'my_matches' %}is-active{% endif %}" href="/tournaments/{{ tournament.id }}?tab=my_matches">我的对阵</a>
+            {% endif %}
+            {% if show_participants_nav %}
+                <a class="sidebar-link {% if active_tab == 'participants' %}is-active{% endif %}" href="/tournaments/{{ tournament.id }}?tab=participants">参与者管理</a>
+            {% endif %}
+            {% if show_bracket_nav %}
+                <a class="sidebar-link {% if active_tab == 'bracket' %}is-active{% endif %}" href="/tournaments/{{ tournament.id }}?tab=bracket">对阵表</a>
+            {% endif %}
+            <a class="sidebar-link {% if active_tab == 'rankings' %}is-active{% endif %}" href="/tournaments/{{ tournament.id }}?tab=rankings">排行榜</a>
+        </nav>
+
+        <div class="sidebar-stats">
+            <div>
+                <span>赛制</span>
+                <strong>{{ tournament.format_label }}</strong>
+            </div>
+            <div>
+                <span>赛段</span>
+                <strong>{{ tournament.stage_label }}</strong>
+            </div>
+            {% if stage_status.enabled %}
+                <div>
+                    <span>当前阶段</span>
+                    <strong>{{ stage_status.current_stage_label }}</strong>
+                </div>
+            {% endif %}
+            <div>
+                <span>报名人数</span>
+                <strong>{{ participant_count }}</strong>
+            </div>
+        </div>
+    </aside>
+
+    <section class="detail-main">
+        {% if bp_sync %}
+            <div
+                class="bp-sync-root"
+                data-bp-sync-url="{{ bp_sync.url }}"
+                data-bp-sync-key="{{ bp_sync.key }}"
+                data-bp-sync-interval="{{ bp_sync.interval_ms }}"
+                data-bp-partial-url="{{ bp_sync.partial_url or '' }}"
+                data-bp-partial-target="{{ bp_sync.partial_target or '' }}"
+            ></div>
+        {% endif %}
+        {% if active_tab == 'info' %}
+            <article class="surface-card main-panel">
+                <div class="panel-header">
+                    <div>
+                        <p class="eyebrow">赛事信息</p>
+                        <h2>{{ tournament.name }}</h2>
+                    </div>
+                    <div class="hero-actions compact-actions">
+                        {% if tournament.checkin_open %}
+                            <span class="status-badge warning">签到开放中</span>
+                        {% endif %}
+                        {% if can_start_tournament %}
+                            <form method="post" action="/tournaments/{{ tournament.id }}/start">
+                                <button class="primary-button" type="submit">开始比赛</button>
+                            </form>
+                        {% endif %}
+                        {% if can_revert_tournament %}
+                            <form method="post" action="/tournaments/{{ tournament.id }}/revert-start" onsubmit="return confirm('⚠️ 确定要将比赛回退到未开始状态吗？\n\n所有对局记录、比分和准备状态将被永久清除，对阵表将在重新开始后重新生成。此操作不可撤销！');">
+                                <button class="ghost-button" type="submit">↩ 回退比赛</button>
+                            </form>
+                        {% endif %}
+                        {% if manager and tournament.hide_bracket_until_publish and not tournament.bracket_published %}
+                            <form method="post" action="/tournaments/{{ tournament.id }}/publish-bracket">
+                                <button class="primary-button" type="submit">公布对阵表</button>
+                            </form>
+                        {% endif %}
+                    </div>
+                </div>
+
+                {% if stage_status.enabled %}
+                    <section class="stage-status-card">
+                        <div class="stage-status-head">
+                            <div>
+                                <p class="eyebrow">阶段切换</p>
+                                <h3>{{ stage_status.current_stage_label }}</h3>
+                            </div>
+                            <div class="stage-pill-row">
+                                <span class="status-badge {% if stage_status.current_stage == 1 %}warning{% else %}success{% endif %}">第一阶段：{{ stage_status.stage1_label }}</span>
+                                <span class="status-badge {% if stage_status.stage2_started %}success{% elif stage_status.stage2_ready %}warning{% endif %}">第二阶段：{{ stage_status.stage2_label }}</span>
+                            </div>
+                        </div>
+                        <p class="muted-copy stage-status-copy">{{ stage_status.summary }}</p>
+                    </section>
+                {% endif %}
+
+                {% if show_my_matches_nav and tournament.started %}
+                    <section class="stage-status-card prep-entry-card">
+                        <div class="stage-status-head">
+                            <div>
+                                <p class="eyebrow">准备当前比赛</p>
+                                <h3>{{ tournament.bp_mode_label }}</h3>
+                            </div>
+                            <a class="ghost-button" href="/tournaments/{{ tournament.id }}?tab=my_matches">进入准备页面</a>
+                        </div>
+                        <p class="muted-copy stage-status-copy">查看最近的对局信息、双方准备状态与当前 BP 进度。</p>
+                    </section>
+                {% endif %}
+
+                {% if manager and manager_preparation_overview %}
+                    <div data-bp-partial-target="info-partial">
+                    <section class="stage-status-card prep-entry-card">
+                        <div class="stage-status-head">
+                            <div>
+                                <p class="eyebrow">管理员观察面板</p>
+                                <h3>当前进行中的准备与 BP</h3>
+                            </div>
+                            <a class="ghost-button" href="/tournaments/{{ tournament.id }}?tab=bracket">查看完整对阵表</a>
+                        </div>
+                        <div class="prep-game-history">
+                            {% for entry in manager_preparation_overview %}
+                                <article class="prep-game-card">
+                                    <div class="match-headline">
+                                        <span>{{ entry.match.round_label }}</span>
+                                        <span>{{ entry.preparation.status_label }}</span>
+                                    </div>
+                                    <p class="meta-text">{{ entry.match.player1_name }} vs {{ entry.match.player2_name }} · {{ entry.match.series_label }}</p>
+                                    <p class="meta-text">{{ entry.preparation.summary }}</p>
+                                    {% if entry.preparation.turn_clock.active %}
+                                        <div class="prep-clock-row">
+                                            <span class="status-badge warning">本手限时 {{ entry.preparation.turn_clock.duration_seconds }} 秒</span>
+                                            <span class="prep-countdown" data-countdown-seconds="{{ entry.preparation.turn_clock.remaining_seconds }}">{{ entry.preparation.turn_clock.remaining_seconds }}s</span>
+                                        </div>
+                                    {% endif %}
+                                    {% if entry.preparation.map_bp %}
+                                        <div class="tag-list prep-tag-list">
+                                            {% for game in entry.preparation.map_bp.games %}
+                                                <span class="map-tag">第 {{ game.game_number }} 局 · {{ game.map_name }}</span>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                    {% if entry.preparation.evo_bp %}
+                                        <div class="prep-game-history">
+                                            {% for game in entry.preparation.evo_bp.games %}
+                                                <article class="prep-game-card {% if game.is_current %}is-current{% endif %}">
+                                                    <div class="match-headline">
+                                                        <span>第 {{ game.game_number }} 局</span>
+                                                        <span>{{ game.map_name }}</span>
+                                                    </div>
+                                                    <p class="meta-text">{{ game.status_label }} · {{ game.choice_label }}</p>
+                                                    {% if game.game_number > 1 and game.loser_name and game.winner_name %}
+                                                        <p class="meta-text">败者：{{ game.loser_name }} · 胜者：{{ game.winner_name }}</p>
+                                                    {% endif %}
+                                                </article>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                    {% if entry.preparation.commander_bp %}
+                                        <div class="prep-game-history">
+                                            {% for game in entry.preparation.commander_bp.games %}
+                                                <article class="prep-game-card {% if game.is_current %}is-current{% endif %}">
+                                                    <div class="match-headline">
+                                                        <span>第 {{ game.game_number }} 局</span>
+                                                        <span>{{ game.map_name }}</span>
+                                                    </div>
+                                                    {% if game.score_limit %}
+                                                        <p class="meta-text">分数上限：{{ game.score_limit }}</p>
+                                                    {% endif %}
+                                                    <div class="prep-game-side-grid">
+                                                        <div>
+                                                            <strong>A · {{ game.side_names.A }}</strong>
+                                                            <div class="tag-list prep-tag-list">
+                                                                {% if game.bans.A %}
+                                                                    {{ commander_ui.commander_badge(game.bans.A, 'Ban: ') }}
+                                                                {% endif %}
+                                                                {% for commander in game.picks.A %}
+                                                                    {{ commander_ui.commander_badge(commander) }}
+                                                                {% endfor %}
+                                                            </div>
+                                                        </div>
+                                                        <div>
+                                                            <strong>B · {{ game.side_names.B }}</strong>
+                                                            <div class="tag-list prep-tag-list">
+                                                                {% if game.bans.B %}
+                                                                    {{ commander_ui.commander_badge(game.bans.B, 'Ban: ') }}
+                                                                {% endif %}
+                                                                {% for commander in game.picks.B %}
+                                                                    {{ commander_ui.commander_badge(commander) }}
+                                                                {% endfor %}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </article>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                    {% if entry.preparation.bracket_conquest_bp %}
+                                        <div class="prep-game-history">
+                                            {% for game in entry.preparation.bracket_conquest_bp.games %}
+                                                <article class="prep-game-card {% if game.is_current %}is-current{% endif %}">
+                                                    <div class="match-headline">
+                                                        <span>第 {{ game.game_number }} 局</span>
+                                                        <span>{{ game.map_name }}</span>
+                                                    </div>
+                                                    <div class="prep-game-side-grid">
+                                                        {% for side in ['A', 'B'] %}
+                                                            <div>
+                                                                <strong>{{ side }} · {{ game.side_names[side] }}</strong>
+                                                                <div class="tag-list prep-tag-list">
+                                                                    {% if game.pick[side] %}
+                                                                        {{ commander_ui.commander_badge(game.pick[side], '出战: ') }}
+                                                                    {% else %}
+                                                                        <span class="pick-tag">出战: 待选择</span>
+                                                                    {% endif %}
+                                                                </div>
+                                                            </div>
+                                                        {% endfor %}
+                                                    </div>
+                                                    {% if game.winner_name %}
+                                                        <p class="meta-text">本局胜者：{{ game.winner_name }}</p>
+                                                    {% endif %}
+                                                </article>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                    {% if entry.preparation.replay_result_enabled and entry.preparation.replay_upload %}
+                                        {% set replay_view = entry.preparation.replay_upload %}
+                                        {% set replay_show_upload_form = false %}
+                                        {% set replay_match_id = entry.match.id if manager else None %}
+                                        {% set replay_source_tab = 'bracket' %}
+                                        {% set replay_preparation_status = entry.preparation.status %}
+                                        {% include '_replay_series_panel.html' %}
+                                    {% endif %}
+                                </article>
+                            {% endfor %}
+                        </div>
+                    </section>
+                    </div>
+                {% endif %}
+
+                {% if shared_admin_error %}
+                    <div class="alert alert-error">{{ shared_admin_error }}</div>
+                {% endif %}
+                {% if shared_admin_success %}
+                    <div class="alert alert-success">{{ shared_admin_success }}</div>
+                {% endif %}
+
+                <dl class="info-pairs large">
+                    <div>
+                        <dt>主办方</dt>
+                        <dd>{{ tournament.creator_name }}</dd>
+                    </div>
+                    <div>
+                        <dt>共享管理员</dt>
+                        <dd>{{ admins | join('、') if admins else '暂无' }}</dd>
+                    </div>
+                    <div>
+                        <dt>比赛时间</dt>
+                        <dd>{{ tournament.start_time }} {{ tz_label }}</dd>
+                    </div>
+                    <div>
+                        <dt>签到时间</dt>
+                        <dd>{{ tournament.checkin_time }} {{ tz_label }}</dd>
+                    </div>
+                    <div>
+                        <dt>比赛赛制</dt>
+                        <dd>{{ tournament.format_label }}</dd>
+                    </div>
+                    {% if tournament.is_private and tournament.invite_code %}
+                    <div class="invite-code-banner" style="background:var(--surface-accent);padding:8px 12px;border-radius:6px;margin:8px 0;">
+                        <dt>私密赛事邀请码</dt>
+                        <dd><strong style="font-size:1.5em;letter-spacing:4px;font-family:monospace;">{{ tournament.invite_code }}</strong></dd>
+                        <small class="field-hint">将此邀请码分享给参赛者，他们在赛事大厅输入后即可加入。</small>
+                    </div>
+                    {% endif %}
+                    {% if tournament.format_type == 'round_robin' or tournament.stage2_format_type == 'round_robin' %}
+                    <div>
+                        <dt>循环赛轮数</dt>
+                        <dd>
+                            {{ tournament.round_robin_cycles }} 轮
+                            {% if tournament.format_type == 'round_robin' and tournament.stage2_format_type == 'round_robin' %}
+                                （适用于第一、二阶段循环赛）
+                            {% elif tournament.format_type == 'round_robin' %}
+                                （适用于第一阶段 / 当前主赛制）
+                            {% else %}
+                                （适用于第二阶段循环赛）
+                            {% endif %}
+                        </dd>
+                    </div>
+                    <div>
+                        <dt>循环赛积分</dt>
+                        <dd>胜 {{ tournament.round_robin_points[0] }} / 平 {{ tournament.round_robin_points[1] }} / 负 {{ tournament.round_robin_points[2] }}</dd>
+                    </div>
+                    <div>
+                        <dt>循环赛全局 BO</dt>
+                        <dd>BO{{ tournament.round_robin_best_of }}</dd>
+                    </div>
+                    {% endif %}
+                    {% if tournament.format_type == 'swiss' or tournament.stage2_format_type == 'swiss' %}
+                    <div>
+                        <dt>瑞士轮常规局 BO</dt>
+                        <dd>BO{{ tournament.swiss_best_of[0] }}</dd>
+                    </div>
+                    <div>
+                        <dt>瑞士轮生死局 BO</dt>
+                        <dd>BO{{ tournament.swiss_best_of[1] }}</dd>
+                    </div>
+                    {% endif %}
+                    <div>
+                        <dt>BP 模式</dt>
+                        <dd>{{ tournament.bp_mode_label }}</dd>
+                    </div>
+                    <div>
+                        <dt>每轮 BP 限时</dt>
+                        <dd>{{ tournament.bp_step_seconds }} 秒</dd>
+                    </div>
+                    <div>
+                        <dt>Replay 自动判负</dt>
+                        <dd>{% if tournament.replay_result_enabled %}已启用，选手按局上传 replay 自动累计比分{% else %}未启用{% endif %}</dd>
+                    </div>
+                    {% if manager and tournament.replay_result_enabled %}
+                    <div>
+                        <dt>赛事 Replay 归档</dt>
+                        <dd>
+                            {% if tournament_replay_archive %}
+                                已归档 {{ tournament_replay_archive.game_count }} 个 replay
+                                <a class="ghost-button" href="{{ tournament_replay_archive.url }}">下载整场赛事 .tar.gz</a>
+                            {% elif tournament.started %}
+                                赛事全部对局完成后可下载整场赛事 replay .tar.gz
+                            {% else %}
+                                比赛开始并全部结束后可下载整场赛事 replay .tar.gz
+                            {% endif %}
+                        </dd>
+                    </div>
+                    {% endif %}
+                    {% if tournament.bp_mode == 'commander_draft' %}
+                    <div>
+                        <dt>指挥官池模式</dt>
+                        <dd>{{ tournament.commander_pool_mode_label }}</dd>
+                    </div>
+                    <div>
+                        <dt>指挥官 Ban 范围</dt>
+                        <dd>{{ tournament.commander_ban_mode_label }}</dd>
+                    </div>
+                    <div>
+                        <dt>指挥官提交规则</dt>
+                        <dd>先预选后确认；超时自动随机合法选择；若 5/6 分上限无合法候选，会自动补出 0 分斯托科夫避免死锁。</dd>
+                    </div>
+                    {% endif %}
+                    <div>
+                        <dt>赛段设置</dt>
+                        <dd>{{ tournament.stage_label }}</dd>
+                    </div>
+                    {% if tournament.stage_mode == 'double_stage' %}
+                    <div>
+                        <dt>第一阶段赛制</dt>
+                        <dd>{{ tournament.format_label }}</dd>
+                    </div>
+                    <div>
+                        <dt>第二阶段赛制</dt>
+                        <dd>{{ tournament.stage2_format_label }}</dd>
+                    </div>
+                    <div>
+                        <dt>第一阶段小组数</dt>
+                        <dd>{{ tournament.stage1_group_count }}</dd>
+                    </div>
+                    {% endif %}
+                    <div>
+                        <dt>奖金信息</dt>
+                        <dd>{{ tournament.prize_info }}</dd>
+                    </div>
+                    <div>
+                        <dt>地图池</dt>
+                        <dd>
+                            {% if tournament.map_pool_tags %}
+                                <div class="tag-list">
+                                    {% for map_name in tournament.map_pool_tags %}
+                                        <span class="map-tag">{{ map_name }}</span>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                待公布
+                            {% endif %}
+                        </dd>
+                    </div>
+                    <div>
+                        <dt>对阵表规则</dt>
+                        <dd>
+                            {% if tournament.hide_bracket_until_publish %}
+                                {% if tournament.bracket_published %}
+                                    已由主办方公布，对报名选手可见
+                                {% else %}
+                                    主办方公布前隐藏对阵表
+                                {% endif %}
+                            {% else %}
+                                报名成功后始终可见
+                            {% endif %}
+                        </dd>
+                    </div>
+                    <div>
+                        <dt>赛事状态</dt>
+                        <dd>{{ tournament.phase_label }}</dd>
+                    </div>
+                    {% if tournament.started_at %}
+                    <div>
+                        <dt>实际开始时间</dt>
+                        <dd>{{ tournament.started_at }} {{ tz_label }}</dd>
+                    </div>
+                    {% endif %}
+                </dl>
+
+                {% if creator_can_manage_admins %}
+                <section class="stage-status-card">
+                    <div class="stage-status-head">
+                        <div>
+                            <p class="eyebrow">共享管理员</p>
+                            <h3>创建后继续追加管理员</h3>
+                        </div>
+                    </div>
+                    <form method="post" action="/tournaments/{{ tournament.id }}/admins" class="signup-form">
+                        <label>
+                            <span>追加共享管理员账号</span>
+                            <input name="shared_admins" type="text" list="detail-usernames" placeholder="输入账号，多个用逗号分隔">
+                            <datalist id="detail-usernames">
+                                {% for username in user_suggestions %}
+                                    <option value="{{ username }}"></option>
+                                {% endfor %}
+                            </datalist>
+                        </label>
+                        <div class="form-actions">
+                            <button class="primary-button" type="submit">添加共享管理员</button>
+                        </div>
+                    </form>
+                </section>
+                {% endif %}
+
+                {% if creator_can_manage_admins %}
+                <section class="stage-status-card">
+                    <div class="stage-status-head">
+                        <div>
+                            <p class="eyebrow">赛事编辑</p>
+                            <h3>创建后继续修改赛事信息</h3>
+                        </div>
+                    </div>
+                    {% if tournament_settings_error %}
+                        <div class="alert alert-error">{{ tournament_settings_error }}</div>
+                    {% endif %}
+                    {% if tournament_settings_success %}
+                        <div class="alert alert-success">{{ tournament_settings_success }}</div>
+                    {% endif %}
+                    {% if tournament.started %}
+                        <p class="muted-copy">赛事开始后，这个组件会锁定，避免中途修改时间、地图池或 BP 设置影响已生成的对局和准备状态。</p>
+                    {% else %}
+                        <form method="post" action="/tournaments/{{ tournament.id }}/settings" class="signup-form">
+                            <div class="form-grid two-columns">
+                                <label>
+                                    <span>赛事名称</span>
+                                    <input name="name" type="text" value="{{ tournament.name }}" required>
+                                </label>
+                                <label>
+                                    <span>BP 模式</span>
+                                    <select name="bp_mode">
+                                        <option value="none" {% if tournament.bp_mode == 'none' %}selected{% endif %}>不启用 BP</option>
+                                        <option value="map_pool" {% if tournament.bp_mode == 'map_pool' %}selected{% endif %}>地图池 BP</option>
+                                        <option value="commander_draft" {% if tournament.bp_mode == 'commander_draft' %}selected{% endif %}>随机地图 + 指挥官 BP</option>
+                                        <option value="commander_conquest_1v1" {% if tournament.bp_mode == 'commander_conquest_1v1' %}selected{% endif %}>指挥官1v1征服者</option>
+                                        <option value="commander_conquest_2v2" {% if tournament.bp_mode == 'commander_conquest_2v2' %}selected{% endif %}>指挥官2v2征服者</option>
+                                        <option value="ladder_1v1_bp" {% if tournament.bp_mode == 'ladder_1v1_bp' %}selected{% endif %}>天梯 1v1 BP</option>
+                                        <option value="evo_bp" {% if tournament.bp_mode == 'evo_bp' %}selected{% endif %}>EVO BP</option>
+                                    </select>
+                                </label>
+                                <label>
+                                    <span>比赛时间（{{ tz_label }}）</span>
+                                    <input name="start_time" type="datetime-local" value="{{ to_input_dt(tournament.start_time) }}" required>
+                                </label>
+                                <label>
+                                    <span>签到时间（{{ tz_label }}）</span>
+                                    <input name="checkin_time" type="datetime-local" value="{{ to_input_dt(tournament.checkin_time) }}" required>
+                                </label>
+                                <label>
+                                    <span>每轮 BP 时间</span>
+                                    <input name="bp_step_seconds" type="number" min="10" max="600" value="{{ tournament.bp_step_seconds }}" required>
+                                </label>
+                                <label>
+                                    <span>指挥官池模式</span>
+                                    <select name="commander_shared_pool_mode">
+                                        <option value="shared" {% if tournament.commander_shared_pool_mode == 'shared' %}selected{% endif %}>双方共享指挥官池</option>
+                                        <option value="separate" {% if tournament.commander_shared_pool_mode == 'separate' %}selected{% endif %}>双方独立指挥官池</option>
+                                    </select>
+                                </label>
+                                <label>
+                                    <span>指挥官 Ban 生效范围</span>
+                                    <select name="commander_ban_mode">
+                                        <option value="global" {% if tournament.commander_ban_mode == 'global' %}selected{% endif %}>Ban 全局生效</option>
+                                        <option value="opponent_only" {% if tournament.commander_ban_mode == 'opponent_only' %}selected{% endif %}>Ban 仅限制对方</option>
+                                    </select>
+                                </label>
+                                <label class="checkbox-row checkbox-block-row">
+                                    <input name="replay_result_enabled" type="checkbox" {% if tournament.replay_result_enabled %}checked{% endif %}>
+                                    <span>启用上传 replay 自动判定小局胜负</span>
+                                </label>
+                            </div>
+                            <div class="form-grid single-column">
+                                <label>
+                                    <span>赛事描述信息</span>
+                                    <textarea name="description" rows="5" required>{{ tournament.description }}</textarea>
+                                </label>
+                                <label>
+                                    <span>赛事奖金信息</span>
+                                    <textarea name="prize_info" rows="3">{{ tournament.prize_info }}</textarea>
+                                </label>
+                                <label>
+                                    <span>赛事地图池信息</span>
+                                    <textarea name="map_pool" rows="3">{{ tournament.map_pool }}</textarea>
+                                </label>
+                                <label class="checkbox-row">
+                                    <input name="hide_bracket_until_publish" type="checkbox" {% if tournament.hide_bracket_until_publish %}checked{% endif %}>
+                                    <span>在主办方确认并公布对阵表前，隐藏“对阵表”按钮</span>
+                                </label>
+                            </div>
+                            <div class="form-actions">
+                                <button class="primary-button" type="submit">保存赛事信息</button>
+                            </div>
+                        </form>
+                    {% endif %}
+                </section>
+                {% endif %}
+
+                <section class="rich-block">
+                    <h3>赛事描述</h3>
+                    <p>{{ tournament.description }}</p>
+                </section>
+            </article>
+
+        {% elif active_tab == 'signup' %}
+            <article class="surface-card main-panel">
+                <div class="panel-header">
+                    <div>
+                        <p class="eyebrow">报名参赛</p>
+                        <h2>{% if registration %}修改昵称、签到或退出比赛{% else %}输入昵称完成报名{% endif %}</h2>
+                    </div>
+                    <div class="status-stack">
+                        {% if registration and registration.checked_in %}
+                            <span class="status-badge success">已签到</span>
+                        {% elif tournament.checkin_open %}
+                            <span class="status-badge warning">签到开放中</span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="signup-form">
+                    {% if tournament.registration_open %}
+                        <form method="post" action="/tournaments/{{ tournament.id }}/register">
+                            <label>
+                                <span>参赛昵称</span>
+                                <input name="nickname" type="text" minlength="2" maxlength="24" value="{{ registration.nickname if registration else '' }}" placeholder="例如：Team Alpha" required>
+                            </label>
+                            <div class="form-actions">
+                                <button class="primary-button" type="submit">{{ '修改昵称' if registration else '参加比赛' }}</button>
+                            </div>
+                        </form>
+                        <div class="form-actions wrap-actions">
+                            {% if registration and can_self_checkin %}
+                                <form method="post" action="/tournaments/{{ tournament.id }}/checkin">
+                                    <button class="ghost-button" type="submit">立即签到</button>
+                                </form>
+                            {% endif %}
+                            {% if registration and can_withdraw %}
+                                <form method="post" action="/tournaments/{{ tournament.id }}/withdraw">
+                                    <button class="ghost-button danger" type="submit">退出比赛</button>
+                                </form>
+                            {% endif %}
+                        </div>
+                    {% else %}
+                        <div class="empty-inline">比赛已开始，报名入口已关闭。</div>
+                    {% endif %}
+                </div>
+
+                {% if registration and registration.checked_in_at %}
+                    <div class="inline-note">签到时间：{{ registration.checked_in_at }} {{ tz_label }}</div>
+                {% endif %}
+
+                <section class="participant-section">
+                    <div class="panel-header compact-header">
+                        <div>
+                            <p class="eyebrow">报名列表</p>
+                            <h3>当前参赛选手</h3>
+                        </div>
+                    </div>
+                    <div class="participant-list">
+                        {% for participant in participants %}
+                            <div class="participant-item">
+                                <div class="participant-title">
+                                    <strong>{{ participant.nickname }}</strong>
+                                    <span>{{ participant.account_name }}</span>
+                                </div>
+                                <span class="status-badge {% if participant.checked_in %}success{% else %}warning{% endif %}">{{ '已签到' if participant.checked_in else '未签到' }}</span>
+                            </div>
+                        {% else %}
+                            <div class="participant-item muted">还没有选手报名。</div>
+                        {% endfor %}
+                    </div>
+                </section>
+            </article>
+
+        {% elif active_tab == 'my_matches' %}
+            {% include '_tournament_my_matches_panel.html' %}
+
+        {% elif active_tab == 'participants' %}
+            <article class="surface-card main-panel">
+                <div class="panel-header">
+                    <div>
+                        <p class="eyebrow">参与者管理</p>
+                        <h2>赛事管理员操作区</h2>
+                    </div>
+                    {% if participant_actions_locked %}
+                        <span class="status-badge warning">对局开始后已锁定编辑</span>
+                    {% endif %}
+                </div>
+
+                {% if not participant_actions_locked %}
+                    {% if tournament.stage_mode == 'double_stage' %}
+                        <section class="participant-admin-card">
+                            <div>
+                                <p class="eyebrow">双阶段设置</p>
+                                <h3>第一阶段分组与出线</h3>
+                                <p class="meta-text">先设置第一阶段的小组数量，再为每个小组配置晋级名额；瑞士轮会按组内 n 胜 n 负自动判定出线。</p>
+                            </div>
+                            <form method="post" action="/tournaments/{{ tournament.id }}/groups" class="inline-form">
+                                <input name="group_count" type="number" min="1" max="16" value="{{ tournament.stage1_group_count }}" required>
+                                <button class="ghost-button" type="submit">保存小组数</button>
+                            </form>
+                            <div class="participant-group-settings">
+                                {% for group in stage_group_settings %}
+                                    <form method="post" action="/tournaments/{{ tournament.id }}/groups/{{ group.group_number }}/advance" class="inline-form">
+                                        <div class="participant-title">
+                                            <strong>第 {{ group.group_number }} 组</strong>
+                                            <span>设置本组晋级人数</span>
+                                        </div>
+                                        <input name="advance_count" type="number" min="1" value="{{ group.advance_count }}" required>
+                                        <button class="ghost-button" type="submit">保存出线名额</button>
+                                    </form>
+                                {% endfor %}
+                            </div>
+                        </section>
+                    {% endif %}
+
+                    <section class="participant-admin-card add-player-card">
+                        <div>
+                            <p class="eyebrow">添加选手</p>
+                            <h3>创建临时选手</h3>
+                            <p class="meta-text">临时选手不关联账号，只能由赛事管理员在对阵表中汇报或修改比分。</p>
+                        </div>
+                        <form method="post" action="/tournaments/{{ tournament.id }}/participants/temp" class="inline-form">
+                            <input name="nickname" type="text" minlength="2" maxlength="24" placeholder="输入临时选手昵称" required>
+                            <button class="ghost-button" type="submit">添加选手</button>
+                        </form>
+                    </section>
+                {% endif %}
+
+                <div class="participant-group-grid {% if tournament.stage_mode != 'double_stage' or tournament.stage1_group_count == 1 %}is-single-group{% endif %}">
+                    {% for group_section in grouped_participant_sections %}
+                        <section class="participant-group-column surface-card nested-card">
+                            <div class="participant-group-head">
+                                <div>
+                                    <p class="eyebrow">{{ group_section.title }}</p>
+                                    <h3>{{ group_section.participants | length }} 名选手</h3>
+                                </div>
+                                <div class="status-stack">
+                                    {% if tournament.stage_mode == 'double_stage' %}
+                                        <span class="status-badge">{{ group_section.advance_count }} 进下一阶段</span>
+                                    {% endif %}
+                                    <span class="status-badge {% if group_section.checked_in_count == (group_section.participants | length) and group_section.participants %}success{% else %}warning{% endif %}">已签到 {{ group_section.checked_in_count }}/{{ group_section.participants | length }}</span>
+                                </div>
+                            </div>
+
+                            <div class="participant-admin-list">
+                                {% for participant in group_section.participants %}
+                                    <article class="participant-admin-card">
+                                        <div class="participant-admin-head">
+                                            <div class="participant-title">
+                                                <strong>{{ participant.nickname }}</strong>
+                                                <span>{{ participant.account_name }}{% if participant.is_temporary %} · 临时选手{% endif %}</span>
+                                            </div>
+                                            <div class="status-stack">
+                                                <span class="status-badge">种子 {{ participant.seed_order }}</span>
+                                                <span class="status-badge {% if participant.checked_in %}success{% else %}warning{% endif %}">{{ '已签到' if participant.checked_in else '未签到' }}</span>
+                                                {% if participant.checked_in_at %}
+                                                    <span class="meta-text">{{ participant.checked_in_at }} {{ tz_label }}</span>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+
+                                        <div class="participant-manager-actions">
+                                            <form method="post" action="/tournaments/{{ tournament.id }}/participants/{{ participant.id }}/nickname" class="inline-form">
+                                                <input name="nickname" type="text" value="{{ participant.nickname }}" minlength="2" maxlength="24" {% if participant_actions_locked %}disabled{% endif %} required>
+                                                <button class="ghost-button" type="submit" {% if participant_actions_locked %}disabled{% endif %}>保存昵称</button>
+                                            </form>
+                                            {% if not participant_actions_locked and tournament.stage_mode == 'double_stage' %}
+                                                <form method="post" action="/tournaments/{{ tournament.id }}/participants/{{ participant.id }}/group" class="inline-form">
+                                                    <select name="group_number">
+                                                        {% for group_number in range(1, tournament.stage1_group_count + 1) %}
+                                                            <option value="{{ group_number }}" {% if group_number == participant.group_number %}selected{% endif %}>第 {{ group_number }} 组</option>
+                                                        {% endfor %}
+                                                    </select>
+                                                    <button class="ghost-button" type="submit">保存分组</button>
+                                                </form>
+                                            {% endif %}
+                                            <div class="form-actions wrap-actions">
+                                                {% if not participant_actions_locked %}
+                                                    <form method="post" action="/tournaments/{{ tournament.id }}/participants/{{ participant.id }}/seed">
+                                                        <input type="hidden" name="direction" value="up">
+                                                        <button class="ghost-button" type="submit">上移</button>
+                                                    </form>
+                                                    <form method="post" action="/tournaments/{{ tournament.id }}/participants/{{ participant.id }}/seed">
+                                                        <input type="hidden" name="direction" value="down">
+                                                        <button class="ghost-button" type="submit">下移</button>
+                                                    </form>
+                                                {% endif %}
+                                                {% if manager_can_checkin and not participant.checked_in %}
+                                                    <form method="post" action="/tournaments/{{ tournament.id }}/participants/{{ participant.id }}/checkin">
+                                                        <button class="ghost-button" type="submit">代为签到</button>
+                                                    </form>
+                                                {% endif %}
+                                                {% if not participant_actions_locked %}
+                                                    <form method="post" action="/tournaments/{{ tournament.id }}/participants/{{ participant.id }}/remove">
+                                                        <button class="ghost-button danger" type="submit">移除选手</button>
+                                                    </form>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </article>
+                                {% else %}
+                                    <div class="empty-inline">当前小组还没有选手。</div>
+                                {% endfor %}
+                            </div>
+                        </section>
+                    {% else %}
+                        <div class="empty-inline">当前没有可管理的参赛者。</div>
+                    {% endfor %}
+                </div>
+            </article>
+
+        {% elif active_tab == 'bracket' %}
+            <article class="surface-card main-panel">
+                <div class="panel-header">
+                    <div>
+                        <p class="eyebrow">对阵表</p>
+                        <h2>对阵信息</h2>
+                    </div>
+                    <div class="status-stack">
+                        {% if can_start_tournament %}
+                            <form method="post" action="/tournaments/{{ tournament.id }}/start">
+                                <button class="primary-button" type="submit">开始比赛</button>
+                            </form>
+                        {% endif %}
+                        {% if can_revert_tournament %}
+                            <form method="post" action="/tournaments/{{ tournament.id }}/revert-start" onsubmit="return confirm('⚠️ 确定要将比赛回退到未开始状态吗？\n\n所有对局记录、比分和准备状态将被永久清除，对阵表将在重新开始后重新生成。此操作不可撤销！');">
+                                <button class="ghost-button" type="submit">↩ 回退比赛</button>
+                            </form>
+                        {% endif %}
+                        {% if bracket_state.champion %}
+                            <span class="status-badge success">冠军：{{ bracket_state.champion }}</span>
+                        {% endif %}
+                        {% if manager and tournament.hide_bracket_until_publish and not tournament.bracket_published %}
+                            <span class="status-badge warning">当前为管理员预览，尚未公开</span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <p class="muted-copy">{{ bracket_state.summary }}</p>
+
+                {% if stage_status.enabled %}
+                    <section class="stage-status-card compact-stage-status">
+                        <div class="stage-status-head">
+                            <div>
+                                <p class="eyebrow">当前阶段</p>
+                                <h3>{{ stage_status.current_stage_label }}</h3>
+                            </div>
+                            <div class="stage-pill-row">
+                                <span class="status-badge {% if stage_status.current_stage == 1 %}warning{% else %}success{% endif %}">第一阶段</span>
+                                <span class="status-badge {% if stage_status.stage2_started %}success{% elif stage_status.stage2_ready %}warning{% endif %}">第二阶段</span>
+                            </div>
+                        </div>
+                        <p class="muted-copy stage-status-copy">{{ stage_status.summary }}</p>
+                    </section>
+                {% endif %}
+
+                {% if bracket_state.groups %}
+                    <div data-bp-partial-target="bracket-partial">
+                    {% for group in bracket_state.groups %}
+                        <section class="bracket-section">
+                            <div class="panel-header compact-header">
+                                <div>
+                                    <p class="eyebrow">{{ group.title }}</p>
+                                </div>
+                                {% if group.best_of_control %}
+                                    <div>
+                                        <p class="meta-text">{{ group.best_of_control.summary }}</p>
+                                        {% if manager %}
+                                            <form class="round-setting-form" method="post" action="/tournaments/{{ tournament.id }}/format-best-of-settings">
+                                                <input type="hidden" name="setting_mode" value="{{ group.best_of_control.mode }}">
+                                                {% if group.best_of_control.mode == 'round_robin' %}
+                                                    <label>
+                                                        <span>循环赛全局 BO</span>
+                                                        <select name="round_robin_best_of">
+                                                            {% for option in best_of_options_for_bracket('round_robin') %}
+                                                                <option value="{{ option }}" {% if option == group.best_of_control.round_robin_best_of %}selected{% endif %}>BO{{ option }}</option>
+                                                            {% endfor %}
+                                                        </select>
+                                                    </label>
+                                                {% else %}
+                                                    <label>
+                                                        <span>常规局 BO</span>
+                                                        <select name="swiss_regular_best_of">
+                                                            {% for option in match_best_of_options %}
+                                                                <option value="{{ option }}" {% if option == group.best_of.control.swiss_regular_best_of %}selected{% endif %}>BO{{ option }}</option>
+                                                            {% endfor %}
+                                                        </select>
+                                                    </label>
+                                                    <label>
+                                                        <span>生死局 BO</span>
+                                                        <select name="swiss_decider_best_of">
+                                                            {% for option in match_best_of_options %}
+                                                                <option value="{{ option }}" {% if option == group.best_of.control.swiss_decider_best_of %}selected{% endif %}>BO{{ option }}</option>
+                                                            {% endfor %}
+                                                        </select>
+                                                    </label>
+                                                {% endif %}
+                                                <button class="ghost-button" type="submit">应用</button>
+                                            </form>
+                                        {% endif %}
+                                    </div>
+                                {% endif %}
+                            </div>
+
+                            {% if group.display_mode == 'tree' %}
+                                <div class="bracket-tree-shell" id="bracket-tree-shell-main">
+                                    <div class="bracket-tree">
+                                        {% for round in group.rounds %}
+                                            <div class="bracket-round-col">
+                                                <div class="round-header">
+                                                    <h3>{{ round.title }}</h3>
+                                                    {% if manager %}
+                                                        <form class="round-setting-form" method="post" action="/tournaments/{{ tournament.id }}/round-settings">
+                                                            <input type="hidden" name="bracket_type" value="{{ round.bracket_type }}">
+                                                            <input type="hidden" name="round_number" value="{{ round.round_number }}">
+                                                            <input type="hidden" name="stage_index" value="{{ round.stage_index }}">
+                                                            <input type="hidden" name="group_number" value="{{ round.group_number }}">
+                                                            <label>
+                                                                <span>本轮 BO</span>
+                                                                <select name="best_of">
+                                                                    {% for option in best_of_options_for_bracket(round.bracket_type) %}
+                                                                        <option value="{{ option }}" {% if option == round.best_of %}selected{% endif %}>BO{{ option }}</option>
+                                                                    {% endfor %}
+                                                                </select>
+                                                            </label>
+                                                            <button class="ghost-button" type="submit">应用</button>
+                                                        </form>
+                                                    {% endif %}
+                                                </div>
+                                                <div class="bracket-column-matches">
+                                                    {% for match in round.matches %}
+                                                        <article class="bracket-node match-card {% if match.status == 'completed' %}is-complete{% endif %}">
+                                                            <div class="match-headline">
+                                                                <span>{{ match.series_label }}</span>
+                                                                <span>{{ '已完成' if match.status == 'completed' else '待进行' }}</span>
+                                                            </div>
+                                                            <div class="bracket-player-row {% if match.winner_id == match.player1_id %}is-winner{% endif %}">
+                                                                <strong>{{ match.player1_name }}</strong>
+                                                                <span>{{ match.score1 if match.status == 'completed' else '-' }}</span>
+                                                            </div>
+                                                            <div class="bracket-player-row {% if match.winner_id == match.player2_id %}is-winner{% endif %}">
+                                                                <strong>{{ match.player2_name }}</strong>
+                                                                <span>{{ match.score2 if match.status == 'completed' else '-' }}</span>
+                                                            </div>
+                                                            {% if match.winner_name %}
+                                                                <p class="match-winner">胜者：{{ match.winner_name }}</p>
+                                                            {% endif %}
+                                                            {% if match.preparation %}
+                                                                <section class="bracket-prep-observer">
+                                                                    <div class="match-headline">
+                                                                        <span>{{ match.preparation.bp_mode_label }}</span>
+                                                                        <span>{{ match.preparation.status_label }}</span>
+                                                                    </div>
+                                                                    <p class="meta-text">{{ match.preparation.summary }}</p>
+                                                                    {% if match.preparation.turn_clock.active %}
+                                                                        <div class="prep-clock-row">
+                                                                            <span class="status-badge warning">本手限时 {{ match.preparation.turn_clock.duration_seconds }} 秒</span>
+                                                                            <span class="prep-countdown" data-countdown-seconds="{{ match.preparation.turn_clock.remaining_seconds }}">{{ match.preparation.turn_clock.remaining_seconds }}s</span>
+                                                                        </div>
+                                                                    {% endif %}
+                                                                    {% if match.preparation.bracket_map_bp %}
+                                                                        <div class="prep-game-history">
+                                                                            {% for game in match.preparation.bracket_map_bp.games %}
+                                                                                <article class="prep-game-card {% if game.is_current %}is-current{% endif %}">
+                                                                                    <div class="match-headline">
+                                                                                        <span>第 {{ game.game_number }} 局</span>
+                                                                                        <span>{{ game.map_name }}</span>
+                                                                                    </div>
+                                                                                    <p class="meta-text">{{ game.status_label }}{% if game.actor_name %} · {{ game.actor_name }}{% endif %}</p>
+                                                                                    {% if game.actions %}
+                                                                                        <div class="tag-list prep-tag-list">
+                                                                                            {% for action in game.actions %}
+                                                                                                <span class="pick-tag">{{ action.type_label }} · {{ action.actor_name }}</span>
+                                                                                            {% endfor %}
+                                                                                        </div>
+                                                                                    {% endif %}
+                                                                                </article>
+                                                                            {% endfor %}
+                                                                        </div>
+                                                                        {% if match.preparation.bracket_map_bp.veto_actions %}
+                                                                            <div class="tag-list prep-tag-list">
+                                                                                {% for action in match.preparation.bracket_map_bp.veto_actions %}
+                                                                                    <span class="pick-tag">{{ action.type_label }} · {{ action.actor_name }} · {{ action.map_name }}</span>
+                                                                                {% endfor %}
+                                                                            </div>
+                                                                        {% endif %}
+                                                                    {% endif %}
+                                                                    {% if match.preparation.evo_bp %}
+                                                                        <div class="prep-game-history">
+                                                                            {% for game in match.preparation.evo_bp.games %}
+                                                                                <article class="prep-game-card {% if game.is_current %}is-current{% endif %}">
+                                                                                    <div class="match-headline">
+                                                                                        <span>第 {{ game.game_number }} 局</span>
+                                                                                        <span>{{ game.map_name }}</span>
+                                                                                    </div>
+                                                                                    <p class="meta-text">{{ game.status_label }} · {{ game.choice_label }}</p>
+                                                                                    {% if game.game_number > 1 and game.loser_name and game.winner_name %}
+                                                                                        <p class="meta-text">败者：{{ game.loser_name }} · 胜者：{{ game.winner_name }}</p>
+                                                                                    {% endif %}
+                                                                                </article>
+                                                                            {% endfor %}
+                                                                        </div>
+                                                                    {% endif %}
+                                                                    {% if match.preparation.bracket_commander_bp %}
+                                                                        <div class="prep-game-history">
+                                                                            {% for game in match.preparation.bracket_commander_bp.games %}
+                                                                                <article class="prep-game-card {% if game.is_current %}is-current{% endif %}">
+                                                                                    <div class="match-headline">
+                                                                                        <span>第 {{ game.game_number }} 局</span>
+                                                                                        <span>{{ game.map_name }}</span>
+                                                                                    </div>
+                                                                                    {% if game.score_limit %}
+                                                                                        <p class="meta-text">分数上限：{{ game.score_limit }}</p>
+                                                                                    {% endif %}
+                                                                                    <div class="prep-game-side-grid">
+                                                                                        <div>
+                                                                                            <strong>A · {{ game.side_names.A }}</strong>
+                                                                                            <div class="tag-list prep-tag-list">
+                                                                                                {% if game.bans.A %}
+                                                                                                    {{ commander_ui.commander_badge(game.bans.A, 'Ban: ') }}
+                                                                                                {% endif %}
+                                                                                                {% for commander in game.picks.A %}
+                                                                                                    {{ commander_ui.commander_badge(commander) }}
+                                                                                                {% endfor %}
+                                                                                            </div>
+                                                                                        </div>
+                                                                                        <div>
+                                                                                            <strong>B · {{ game.side_names.B }}</strong>
+                                                                                            <div class="tag-list prep-tag-list">
+                                                                                                {% if game.bans.B %}
+                                                                                                    {{ commander_ui.commander_badge(game.bans.B, 'Ban: ') }}
+                                                                                                {% endif %}
+                                                                                                {% for commander in game.picks.B %}
+                                                                                                    {{ commander_ui.commander_badge(commander) }}
+                                                                                                {% endfor %}
+                                                                                            </div>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                </article>
+                                                                            {% endfor %}
+                                                                        </div>
+                                                                    {% endif %}
+                                                                    {% if match.preparation.bracket_conquest_bp %}
+                                                                        <div class="prep-game-history">
+                                                                            {% for game in match.preparation.bracket_conquest_bp.games %}
+                                                                                <article class="prep-game-card {% if game.is_current %}is-current{% endif %}">
+                                                                                    <div class="match-headline">
+                                                                                        <span>第 {{ game.game_number }} 局</span>
+                                                                                        <span>{{ game.map_name }}</span>
+                                                                                    </div>
+                                                                                    <div class="prep-game-side-grid">
+                                                                                        {% for side in ['A', 'B'] %}
+                                                                                            <div>
+                                                                                                <strong>{{ side }} · {{ game.side_names[side] }}</strong>
+                                                                                                <div class="tag-list prep-tag-list">
+                                                                                                    {% if game.pick[side] %}
+                                                                                                        {{ commander_ui.commander_badge(game.pick[side], '出战: ') }}
+                                                                                                    {% else %}
+                                                                                                        <span class="pick-tag">出战: 待选择</span>
+                                                                                                    {% endif %}
+                                                                                                </div>
+                                                                                            </div>
+                                                                                        {% endfor %}
+                                                                                    </div>
+                                                                                    {% if game.winner_name %}
+                                                                                        <p class="meta-text">本局胜者：{{ game.winner_name }}</p>
+                                                                                    {% endif %}
+                                                                                </article>
+                                                                            {% endfor %}
+                                                                        </div>
+                                                                    {% endif %}
+                                                                    {% if match.preparation.replay_result_enabled and match.preparation.replay_upload %}
+                                                                        {% set replay_view = match.preparation.replay_upload %}
+                                                                        {% set replay_show_upload_form = false %}
+                                                                        {% set replay_match_id = match.id if manager else None %}
+                                                                        {% set replay_source_tab = 'bracket' %}
+                                                                        {% set replay_preparation_status = match.preparation.status %}
+                                                                        {% include '_replay_series_panel.html' %}
+                                                                    {% endif %}
+                                                                </section>
+                                                            {% endif %}
+                                                    {% if match.editable and match.id %}
+                                                        <form class="score-report-form" method="post" action="/tournaments/{{ tournament.id }}/matches/{{ match.id }}/report">
+                                                            <input type="hidden" name="source_tab" value="bracket">
+                                                            <div class="score-report-grid">
+                                                                <label>
+                                                                    <span>{{ match.player1_name }}</span>
+                                                                    <input name="score1" type="number" min="0" value="{{ match.score1 }}" required>
+                                                                </label>
+                                                                <label>
+                                                                    <span>{{ match.player2_name }}</span>
+                                                                    <input name="score2" type="number" min="0" value="{{ match.score2 }}" required>
+                                                                </label>
+                                                            </div>
+                                                            <button class="ghost-button" type="submit">保存比分</button>
+                                                        </form>
+                                                    {% endif %}
+                                                </article>
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            {% else %}
+                                {% for round in group.rounds %}
+                                    <div class="bracket-round">
+                                        <div class="round-header">
+                                            <h3>{{ round.title }}</h3>
+                                        </div>
+                                        <div class="match-grid list-mode-grid">
+                                            {% for match in round.matches %}
+                                                <article class="match-card {% if match.status == 'completed' %}is-complete{% endif %}">
+                                                    <div class="match-headline">
+                                                        <span>{{ match.series_label }}</span>
+                                                        <span>{{ '已完成' if match.status == 'completed' else '待进行' }}</span>
+                                                    </div>
+                                                    <strong>{{ match.player1_name }}</strong>
+                                                    <small>vs</small>
+                                                    <strong>{{ match.player2_name }}</strong>
+                                                    <p class="meta-text">比分：{{ match.score_text if match.status == 'completed' else '- : -' }}</p>
+                                                    {% if match.winner_name %}
+                                                        <p class="match-winner">胜者：{{ match.winner_name }}</p>
+                                                    {% endif %}
+                                                            {% if match.preparation %}
+                                                                <section class="bracket-prep-observer">
+                                                                    <div class="match-headline">
+                                                                        <span>{{ match.preparation.bp_mode_label }}</span>
+                                                                        <span>{{ match.preparation.status_label }}</span>
+                                                                    </div>
+                                                                    <p class="meta-text">{{ match.preparation.summary }}</p>
+                                                                    {% if match.preparation.turn_clock.active %}
+                                                                        <div class="prep-clock-row">
+                                                                            <span class="status-badge warning">本手限时 {{ match.preparation.turn_clock.duration_seconds }} 秒</span>
+                                                                            <span class="prep-countdown" data-countdown-seconds="{{ match.preparation.turn_clock.remaining_seconds }}">{{ match.preparation.turn_clock.remaining_seconds }}s</span>
+                                                                        </div>
+                                                                    {% endif %}
+                                                                    {% if match.preparation.bracket_map_bp %}
+                                                                        <div class="prep-game-history">
+                                                                            {% for game in match.preparation.bracket_map_bp.games %}
+                                                                                <article class="prep-game-card {% if game.is_current %}is-current{% endif %}">
+                                                                                    <div class="match-headline">
+                                                                                        <span>第 {{ game.game_number }} 局</span>
+                                                                                        <span>{{ game.map_name }}</span>
+                                                                                    </div>
+                                                                                    <p class="meta-text">{{ game.status_label }}{% if game.actor_name %} · {{ game.actor_name }}{% endif %}</p>
+                                                                                    {% if game.actions %}
+                                                                                        <div class="tag-list prep-tag-list">
+                                                                                            {% for action in game.actions %}
+                                                                                                <span class="pick-tag">{{ action.type_label }} · {{ action.actor_name }}</span>
+                                                                                            {% endfor %}
+                                                                                        </div>
+                                                                                    {% endif %}
+                                                                                </article>
+                                                                            {% endfor %}
+                                                                        </div>
+                                                                        {% if match.preparation.bracket_map_bp.veto_actions %}
+                                                                            <div class="tag-list prep-tag-list">
+                                                                                {% for action in match.preparation.bracket_map_bp.veto_actions %}
+                                                                                    <span class="pick-tag">{{ action.type_label }} · {{ action.actor_name }} · {{ action.map_name }}</span>
+                                                                                {% endfor %}
+                                                                            </div>
+                                                                        {% endif %}
+                                                                    {% endif %}
+                                                                    {% if match.preparation.evo_bp %}
+                                                                        <div class="prep-game-history">
+                                                                            {% for game in match.preparation.evo_bp.games %}
+                                                                                <article class="prep-game-card {% if game.is_current %}is-current{% endif %}">
+                                                                                    <div class="match-headline">
+                                                                                        <span>第 {{ game.game_number }} 局</span>
+                                                                                        <span>{{ game.map_name }}</span>
+                                                                                    </div>
+                                                                                    <p class="meta-text">{{ game.status_label }} · {{ game.choice_label }}</p>
+                                                                                    {% if game.game_number > 1 and game.loser_name and game.winner_name %}
+                                                                                        <p class="meta-text">败者：{{ game.loser_name }} · 胜者：{{ game.winner_name }}</p>
+                                                                                    {% endif %}
+                                                                                </article>
+                                                                            {% endfor %}
+                                                                        </div>
+                                                                    {% endif %}
+                                                                    {% if match.preparation.bracket_commander_bp %}
+                                                                        <div class="prep-game-history">
+                                                                            {% for game in match.preparation.bracket_commander_bp.games %}
+                                                                                <article class="prep-game-card {% if game.is_current %}is-current{% endif %}">
+                                                                                    <div class="match-headline">
+                                                                                        <span>第 {{ game.game_number }} 局</span>
+                                                                                        <span>{{ game.map_name }}</span>
+                                                                                    </div>
+                                                                                    {% if game.score_limit %}
+                                                                                        <p class="meta-text">分数上限：{{ game.score_limit }}</p>
+                                                                                    {% endif %}
+                                                                                    <div class="prep-game-side-grid">
+                                                                                        <div>
+                                                                                            <strong>A · {{ game.side_names.A }}</strong>
+                                                                                            <div class="tag-list prep-tag-list">
+                                                                                                {% if game.bans.A %}
+                                                                                                    {{ commander_ui.commander_badge(game.bans.A, 'Ban: ') }}
+                                                                                                {% endif %}
+                                                                                                {% for commander in game.picks.A %}
+                                                                                                    {{ commander_ui.commander_badge(commander) }}
+                                                                                                {% endfor %}
+                                                                                            </div>
+                                                                                        </div>
+                                                                                        <div>
+                                                                                            <strong>B · {{ game.side_names.B }}</strong>
+                                                                                            <div class="tag-list prep-tag-list">
+                                                                                                {% if game.bans.B %}
+                                                                                                    {{ commander_ui.commander_badge(game.bans.B, 'Ban: ') }}
+                                                                                                {% endif %}
+                                                                                                {% for commander in game.picks.B %}
+                                                                                                    {{ commander_ui.commander_badge(commander) }}
+                                                                                                {% endfor %}
+                                                                                            </div>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                </article>
+                                                                            {% endfor %}
+                                                                        </div>
+                                                                    {% endif %}
+                                                                    {% if match.preparation.bracket_conquest_bp %}
+                                                                        <div class="prep-game-history">
+                                                                            {% for game in match.preparation.bracket_conquest_bp.games %}
+                                                                                <article class="prep-game-card {% if game.is_current %}is-current{% endif %}">
+                                                                                    <div class="match-headline">
+                                                                                        <span>第 {{ game.game_number }} 局</span>
+                                                                                        <span>{{ game.map_name }}</span>
+                                                                                    </div>
+                                                                                    <div class="prep-game-side-grid">
+                                                                                        {% for side in ['A', 'B'] %}
+                                                                                            <div>
+                                                                                                <strong>{{ side }} · {{ game.side_names[side] }}</strong>
+                                                                                                <div class="tag-list prep-tag-list">
+                                                                                                    {% if game.pick[side] %}
+                                                                                                        {{ commander_ui.commander_badge(game.pick[side], '出战: ') }}
+                                                                                                    {% else %}
+                                                                                                        <span class="pick-tag">出战: 待选择</span>
+                                                                                                    {% endif %}
+                                                                                                </div>
+                                                                                            </div>
+                                                                                        {% endfor %}
+                                                                                    </div>
+                                                                                    {% if game.winner_name %}
+                                                                                        <p class="meta-text">本局胜者：{{ game.winner_name }}</p>
+                                                                                    {% endif %}
+                                                                                </article>
+                                                                            {% endfor %}
+                                                                        </div>
+                                                                    {% endif %}
+                                                                    {% if match.preparation.replay_result_enabled and match.preparation.replay_upload %}
+                                                                        {% set replay_view = match.preparation.replay_upload %}
+                                                                        {% set replay_show_upload_form = false %}
+                                                                        {% set replay_match_id = match.id if manager else None %}
+                                                                        {% set replay_source_tab = 'bracket' %}
+                                                                        {% set replay_preparation_status = match.preparation.status %}
+                                                                        {% include '_replay_series_panel.html' %}
+                                                                    {% endif %}
+                                                                </section>
+                                                            {% endif %}
+                                                    {% if match.editable and match.id %}
+                                                        <form class="score-report-form" method="post" action="/tournaments/{{ tournament.id }}/matches/{{ match.id }}/report">
+                                                            <input type="hidden" name="source_tab" value="bracket">
+                                                            <div class="score-report-grid">
+                                                                <label>
+                                                                    <span>{{ match.player1_name }}</span>
+                                                                    <input name="score1" type="number" min="0" value="{{ match.score1 }}" required>
+                                                                </label>
+                                                                <label>
+                                                                    <span>{{ match.player2_name }}</span>
+                                                                    <input name="score2" type="number" min="0" value="{{ match.score2 }}" required>
+                                                                </label>
+                                                            </div>
+                                                            <button class="ghost-button" type="submit">保存比分</button>
+                                                        </form>
+                                                    {% endif %}
+                                                </article>
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            {% endif %}
+
+                            {% if group.standings %}
+                                <section class="standings-section">
+                                    <div class="panel-header compact-header">
+                                        <div>
+                                            <p class="eyebrow">积分表</p>
+                                            <h3>当前排名</h3>
+                                        </div>
+                                    </div>
+                                    <div class="table-scroll">
+                                        <table class="data-table">
+                                            <thead>
+                                                <tr>
+                                                    <th>排名</th>
+                                                    <th>昵称</th>
+                                                    <th>账号</th>
+                                                    {% if group.standings_mode == 'points' %}
+                                                        <th>平</th>
+                                                        <th>积分</th>
+                                                    {% endif %}
+                                                    <th>胜</th>
+                                                    <th>负</th>
+                                                    <th>已赛</th>
+                                                    <th>Buchholz</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {% for entry in group.standings %}
+                                                    <tr>
+                                                        <td>{{ loop.index }}</td>
+                                                        <td>{{ entry.nickname }}</td>
+                                                        <td>{{ entry.account_name }}</td>
+                                                        {% if group.standings_mode == 'points' %}
+                                                            <td>{{ entry.draws }}</td>
+                                                            <td>{{ entry.points }}</td>
+                                                        {% endif %}
+                                                        <td>{{ entry.wins }}</td>
+                                                        <td>{{ entry.losses }}</td>
+                                                        <td>{{ entry.played }}</td>
+                                                        <td>{{ entry.buchholz }}</td>
+                                                    </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </section>
+                            {% endif %}
+                        </section>
+                    {% endfor %}
+                {% else %}
+                    <div class="empty-inline">{{ bracket_state.summary }}</div>
+                {% endif %}
+                </div>
+            </article>
+        {% elif active_tab == 'rankings' %}
+            <article class="surface-card main-panel">
+                <div class="panel-header">
+                    <div>
+                        <p class="eyebrow">排行榜</p>
+                        <h2>{% if tournament_rankings and tournament_rankings[0].is_final %}最终排名{% else %}当前排名{% endif %}</h2>
+                    </div>
+                    {% if bracket_state.champion %}
+                        <span class="status-badge success">冠军：{{ bracket_state.champion }}</span>
+                    {% endif %}
+                </div>
+                {% if tournament_rankings %}
+                <div class="table-scroll">
+                    <table class="data-table" style="line-height:2.4;">
+                        <thead>
+                            <tr>
+                                <th>排名</th>
+                                <th>选手</th>
+                                <th>胜</th>
+                                <th>负</th>
+                                <th>已赛</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for entry in tournament_rankings %}
+                                <tr>
+                                    <td style="vertical-align:middle;">#{{ entry.rank }}</td>
+                                    <td>
+                                        <span style="display:inline-flex;align-items:center;gap:8px;">
+                                            {{ render_user_avatar_html(entry, 44) | safe }}
+                                            {% if entry.game_nickname %}{{ render_user_nickname_html(entry, 30) | safe }}{% else %}<strong>{{ entry.name }}</strong>{% endif %}
+                                        </span>
+                                    </td>
+                                    <td>{{ entry.wins }}</td>
+                                    <td>{{ entry.losses }}</td>
+                                    <td>{{ entry.played }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                    <p class="muted-copy">暂无排名数据。</p>
+                {% endif %}
+            </article>
+        {% endif %}
+    </section>
+</section>
+{% endblock %}

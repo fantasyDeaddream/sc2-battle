@@ -1,0 +1,163 @@
+<div data-bp-partial-target="bracket-partial">
+
+{% for section in bracket_state.groups %}
+    <section class="bracket-block">
+        <div class="bracket-section-head">
+            <h2>{{ section.title }}</h2>
+            {% if section.best_of_control %}
+                <p class="meta-text">{{ section.best_of_control.summary }}</p>
+            {% endif %}
+        </div>
+
+        {% if section.standings %}
+            <div class="table-scroll">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>选手</th>
+                            <th>胜</th>
+                            <th>平</th>
+                            <th>负</th>
+                            <th>{{ '积分' if section.standings_mode == 'points' else 'Buchholz' }}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for entry in section.standings %}
+                            <tr>
+                                <td>{{ loop.index }}</td>
+                                <td>{{ entry.nickname }}</td>
+                                <td>{{ entry.wins }}</td>
+                                <td>{{ entry.draws }}</td>
+                                <td>{{ entry.losses }}</td>
+                                <td>{{ entry.points if section.standings_mode == 'points' else entry.buchholz }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% endif %}
+
+        {% if section.display_mode == 'tree' %}
+            <div class="bracket-tree-shell" id="bracket-tree-shell">
+                <div class="bracket-tree">
+                    {% for round in section.rounds %}
+                        <div class="bracket-round-col">
+                            <div class="round-header">
+                                <h3>{{ round.title }}</h3>
+                                {% if manager %}
+                                    <form class="round-setting-form" method="post" action="/tournaments/{{ tournament.id }}/round-settings">
+                                        <input type="hidden" name="bracket_type" value="{{ round.bracket_type }}">
+                                        <input type="hidden" name="round_number" value="{{ round.round_number }}">
+                                        <input type="hidden" name="stage_index" value="{{ round.stage_index }}">
+                                        <input type="hidden" name="group_number" value="{{ round.group_number }}">
+                                        <label>
+                                            <span>BO</span>
+                                            <select name="best_of" style="width:60px;">
+                                                {% for option in best_of_options_for_bracket(round.bracket_type) %}
+                                                    <option value="{{ option }}" {% if option == round.best_of %}selected{% endif %}>{{ option }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        </label>
+                                        <button class="ghost-button" type="submit" style="padding:4px 8px;font-size:0.75em;">应用</button>
+                                    </form>
+                                {% endif %}
+                            </div>
+                            <div class="bracket-column-matches">
+                                {% for match in round.matches %}
+                                    {% if not match.is_bye %}
+                                    <article class="bracket-node match-card {% if match.status == 'completed' %}is-complete{% endif %}">
+                                        <div class="match-headline">
+                                            <span>{{ match.series_label }}</span>
+                                            <span>{{ '已完成' if match.status == 'completed' else '待进行' }}</span>
+                                        </div>
+                                        <div class="bracket-player-row {% if match.winner_id == match.player1_id %}is-winner{% endif %}">
+                                            <strong>{{ match.player1_name }}</strong>
+                                            <span>{{ match.score1 if match.status == 'completed' else '-' }}</span>
+                                        </div>
+                                        <div class="bracket-player-row {% if match.winner_id == match.player2_id %}is-winner{% endif %}">
+                                            <strong>{{ match.player2_name }}</strong>
+                                            <span>{{ match.score2 if match.status == 'completed' else '-' }}</span>
+                                        </div>
+                                        {% if match.winner_name %}
+                                            <p class="match-winner">胜者：{{ match.winner_name }}</p>
+                                        {% endif %}
+                                        {% if match.editable and match.id %}
+                                            <form class="score-report-form" method="post" action="/tournaments/{{ tournament.id }}/matches/{{ match.id }}/report">
+                                                <input type="hidden" name="source_tab" value="bracket">
+                                                <div class="score-report-grid">
+                                                    <label>
+                                                        <span>{{ match.player1_name }}</span>
+                                                        <input name="score1" type="number" min="0" value="{{ match.score1 }}" required>
+                                                    </label>
+                                                    <label>
+                                                        <span>{{ match.player2_name }}</span>
+                                                        <input name="score2" type="number" min="0" value="{{ match.score2 }}" required>
+                                                    </label>
+                                                </div>
+                                                <div class="form-actions">
+                                                    <button class="primary-button" type="submit">录入比分</button>
+                                                </div>
+                                            </form>
+                                        {% endif %}
+                                    </article>
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        {% else %}
+            <div class="match-list">
+                {% for round in section.rounds %}
+                    <div class="round-block">
+                        <h3>{{ round.title }}</h3>
+                        {% for match in round.matches %}
+                            <article class="match-card {% if match.status == 'completed' %}is-complete{% endif %}">
+                                <div class="match-headline">
+                                    <span>{{ match.series_label }}</span>
+                                    <span>{{ '已完成' if match.status == 'completed' else '待进行' }}</span>
+                                </div>
+                                <div class="my-match-scoreline">
+                                    <strong>{{ match.player1_name }}</strong>
+                                    <span>{{ match.score_text }}</span>
+                                    <strong>{{ match.player2_name }}</strong>
+                                </div>
+                                {% if match.winner_name %}
+                                    <p class="meta-text">胜者：{{ match.winner_name }}</p>
+                                {% endif %}
+                                {% if match.editable and match.id %}
+                                    <form class="score-report-form" method="post" action="/tournaments/{{ tournament.id }}/matches/{{ match.id }}/report">
+                                        <input type="hidden" name="source_tab" value="bracket">
+                                        <div class="score-report-grid">
+                                            <label>
+                                                <span>{{ match.player1_name }}</span>
+                                                <input name="score1" type="number" min="0" value="{{ match.score1 }}" required>
+                                            </label>
+                                            <label>
+                                                <span>{{ match.player2_name }}</span>
+                                                <input name="score2" type="number" min="0" value="{{ match.score2 }}" required>
+                                            </label>
+                                        </div>
+                                        <div class="form-actions">
+                                            <button class="primary-button" type="submit">录入比分</button>
+                                        </div>
+                                    </form>
+                                {% endif %}
+                            </article>
+                        {% endfor %}
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    </section>
+{% endfor %}
+
+{% if bracket_state.champion %}
+    <section class="surface-card main-panel champion-card">
+        <p class="eyebrow">赛事冠军</p>
+        <h2>{{ bracket_state.champion }}</h2>
+    </section>
+{% endif %}
+</div>

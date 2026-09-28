@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ page_title }} - SC2 Battle</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+    <script defer src="/static/app.js"></script>
+</head>
+<body data-auth-mode="{{ auth_mode or '' }}"{% if needs_game_nickname_binding %} class="nickname-modal-open"{% endif %}>
+    <div class="page-shell">
+        <header class="topbar">
+            <a class="brand" href="{{ '/hub' if current_user else '/auth' }}">
+                <span class="brand-mark">S</span>
+                <span>
+                    <strong>SC2 Battle</strong>
+                </span>
+            </a>
+            <div class="topbar-actions">
+                <a class="ghost-button" href="/guide" target="_blank" rel="noopener">操作指南</a>
+                {% if current_user %}
+                    <a class="ghost-button" href="/hub">入口选择</a>
+                    <a class="ghost-button" href="/dashboard">赛事大厅</a>
+                    <a class="ghost-button" href="/ladder">天梯匹配</a>
+                    <a class="ghost-button" href="/novel">同人小说</a>
+                    <a class="ghost-button" href="/update">风暴对决更新</a>
+                    <a class="ghost-button" href="/sponsor">❤️ 赞助开发</a>
+                    {% if is_streamer or is_superadmin %}
+                        <a class="ghost-button" href="/streamer/bp-replays">BP 回放</a>
+                    {% endif %}
+                    {% if is_superadmin %}
+                        <a class="ghost-button" href="/admin">超级管理员后台</a>
+                    {% endif %}
+                {% else %}
+                    <a class="ghost-button" href="/sponsor">❤️ 赞助开发</a>
+                    <a class="ghost-button" href="/auth">登录 / 注册</a>
+                {% endif %}
+            </div>
+            {% if current_user %}
+            <div class="topbar-user">
+                <a href="/account/settings" class="topbar-user-link" title="账户设置与装扮">
+                    {{ render_user_avatar_html(current_user, 72) | safe }}
+                    <span class="topbar-user-name">
+                        {% if current_user_game_nickname %}{{ render_user_nickname_html(current_user, 34) | safe }}{% else %}{{ current_user.username }}{% endif %}
+                    </span>
+                </a>
+                <form method="post" action="/auth/logout">
+                    <button class="ghost-button" type="submit" style="font-size:0.85rem;padding:0.4rem 0.7rem;">退出</button>
+                </form>
+            </div>
+            {% endif %}
+        </header>
+        <main>
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+    {% if current_user and needs_game_nickname_binding %}
+        <div class="nickname-modal-backdrop">
+            <section class="surface-card nickname-modal-card">
+                <p class="eyebrow">补充资料</p>
+                <h2>绑定游戏内昵称</h2>
+                <p class="muted-copy">已有账号首次登录后需要先绑定游戏内昵称。该昵称会用于 replay 胜负识别，并在 sudo 的 replay 测试页中作为“我方 / 对方胜利”的判定依据。</p>
+                {% if game_nickname_bind_error %}
+                    <div class="alert alert-error">{{ game_nickname_bind_error }}</div>
+                {% endif %}
+                <form method="post" action="/account/game-nickname" class="signup-form">
+                    <input type="hidden" name="redirect_to" value="{{ request.url.path }}">
+                    <label>
+                        <span>游戏内昵称</span>
+                        <input name="game_nickname" type="text" placeholder="请输入你的 SC2 游戏内昵称" required autofocus>
+                    </label>
+                    <div class="form-actions">
+                        <button class="primary-button" type="submit">保存并继续</button>
+                    </div>
+                </form>
+            </section>
+        </div>
+    {% endif %}
+
+    {% if current_user and needs_avatar_setup and not needs_game_nickname_binding %}
+        <div class="nickname-modal-backdrop" id="avatar-setup-modal">
+            <section class="surface-card nickname-modal-card" style="max-width:480px;">
+                <p class="eyebrow">设置头像</p>
+                <h2>选择你的头像</h2>
+                <p class="muted-copy">选择一个默认头像或上传自定义头像。之后可在账号设置中随时修改。</p>
+                <div style="display:flex;gap:12px;justify-content:center;margin:12px 0;">
+                    <form method="post" action="/account/avatar/select" style="display:inline;">
+                        <button name="avatar_name" value="protoss.png" style="background:none;border:none;cursor:pointer;padding:0;">
+                            <img src="/background/normal/protoss.png" style="width:80px;height:80px;border-radius:8px;border:2px solid var(--line);" onerror="this.src='/background/normal/terran.png'">
+                        </button>
+                    </form>
+                    <form method="post" action="/account/avatar/select" style="display:inline;">
+                        <button name="avatar_name" value="terran.png" style="background:none;border:none;cursor:pointer;padding:0;">
+                            <img src="/background/normal/terran.png" style="width:80px;height:80px;border-radius:8px;border:2px solid var(--line);">
+                        </button>
+                    </form>
+                    <form method="post" action="/account/avatar/select" style="display:inline;">
+                        <button name="avatar_name" value="zerg.png" style="background:none;border:none;cursor:pointer;padding:0;">
+                            <img src="/background/normal/zerg.png" style="width:80px;height:80px;border-radius:8px;border:2px solid var(--line);" onerror="this.src='/background/normal/terran.png'">
+                        </button>
+                    </form>
+                </div>
+                <details style="margin:8px 0;">
+                    <summary class="ghost-button" style="cursor:pointer;display:block;text-align:center;">📷 上传自定义头像</summary>
+                    <form method="post" action="/account/avatar/upload" enctype="multipart/form-data" class="signup-form" style="margin-top:8px;">
+                        <label><span>选择图片（PNG/JPEG/WebP）</span><input name="avatar_file" type="file" accept="image/*" required></label>
+                        <div class="form-actions"><button class="primary-button" type="submit">上传头像</button></div>
+                    </form>
+                </details>
+                <div class="form-actions"><a class="ghost-button" href="?skip_avatar=1">暂时跳过</a></div>
+            </section>
+        </div>
+    {% endif %}
+</body>
+</html>

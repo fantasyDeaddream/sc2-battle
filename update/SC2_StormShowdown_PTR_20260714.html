@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>风暴对决 · 平衡性改动 — Storm Showdown Balance Update 2026.7.14</title>
+<style>
+:root {
+    --bg-primary: #060608;
+    --bg-secondary: #0e0e14;
+    --bg-card: #14141c;
+    --bg-card-hover: #1a1a26;
+    --text-primary: #d8d0c0;
+    --text-secondary: #988870;
+    --text-heading: #e8e0d0;
+    --accent-gold: #c8a040;
+    --accent-blue: #5088c0;
+    --accent-green: #48a860;
+    --accent-red: #c04848;
+    --accent-purple: #9b40c0;
+    --accent-cyan: #40b8c0;
+    --accent-orange: #d08040;
+    --accent-ptr: #e07040;
+    --border-subtle: #282830;
+    --border-card: #2a2a35;
+    --shadow-card: 0 2px 16px rgba(0,0,0,.4);
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+    font-family: 'Segoe UI','Noto Sans SC','Microsoft YaHei',sans-serif;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    line-height: 1.85;
+    overflow-x: hidden;
+}
+
+/* ═══ HERO ═══ */
+.hero {
+    position: relative;
+    background: linear-gradient(180deg, #1a0e08 0%, #0f0a10 30%, #060608 100%);
+    padding: 60px 20px 40px;
+    text-align: center;
+    border-bottom: 1px solid var(--border-subtle);
+    overflow: hidden;
+}
+.hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+        radial-gradient(ellipse at 30% 20%, rgba(224,112,64,.12) 0%, transparent 50%),
+        radial-gradient(ellipse at 70% 60%, rgba(200,160,64,.06) 0%, transparent 50%),
+        radial-gradient(ellipse at 50% 100%, rgba(224,112,64,.10) 0%, transparent 40%);
+    pointer-events: none;
+}
+.hero::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--accent-ptr), transparent);
+    opacity: .5;
+}
+.hero-badge {
+    display: inline-block;
+    background: var(--accent-ptr);
+    color: #0a0a0f;
+    font-weight: 700;
+    font-size: .7rem;
+    letter-spacing: 3px;
+    padding: 5px 16px;
+    border-radius: 3px;
+    margin-bottom: 14px;
+    text-transform: uppercase;
+}
+.hero h1 {
+    font-size: 2.1rem;
+    color: var(--text-heading);
+    letter-spacing: 2px;
+    margin: 8px 0;
+}
+.hero h1 .sub {
+    display: block;
+    font-size: .42em;
+    color: var(--text-secondary);
+    font-weight: 400;
+    margin-top: 6px;
+    letter-spacing: 1px;
+}
+.hero-version {
+    color: var(--text-secondary);
+    font-size: .85rem;
+    margin-top: 10px;
+}
+
+/* ═══ LAYOUT ═══ */
+.container {
+    max-width: 940px;
+    margin: 0 auto;
+    padding: 0 24px;
+}
+
+/* ═══ SECTION DIVIDER ═══ */
+.section-divider {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    margin: 40px 0 24px;
+}
+.section-divider .line {
+    flex: 1;
+    max-width: 120px;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(224,112,64,.3));
+}
+.section-divider .line:last-child {
+    background: linear-gradient(90deg, rgba(224,112,64,.3), transparent);
+}
+.section-divider .icon { font-size: 1.3rem; opacity: .6; }
+.section-header {
+    text-align: center;
+    margin: 8px 0 28px;
+}
+.section-header h2 {
+    display: inline-block;
+    font-size: 1.15rem;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    padding: 8px 24px;
+    border: 1px solid var(--accent-ptr);
+    border-radius: 4px;
+    color: var(--accent-ptr);
+}
+
+/* ═══ NOTE ═══ */
+.note-block {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+    padding: 18px 22px;
+    margin: 20px 0;
+}
+.note-block h3 {
+    color: var(--accent-gold);
+    font-size: .95rem;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+}
+.note-block p { font-size: .85rem; color: var(--text-secondary); }
+
+/* ═══ OLD/NEW VALUES ═══ */
+.old-val { color: var(--accent-red); text-decoration: line-through; opacity: .75; }
+.new-val { color: var(--accent-green); font-weight: 600; }
+.arrow { color: var(--accent-gold); margin: 0 4px; }
+
+/* ═══ GLOBAL CARD ═══ */
+.global-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-card);
+    border-radius: 8px;
+    padding: 20px 24px;
+    margin: 14px 0;
+    border-left: 3px solid var(--accent-gold);
+    transition: border-color .2s, background .2s;
+}
+.global-card:hover {
+    border-color: rgba(200,160,64,.4);
+    background: var(--bg-card-hover);
+}
+.global-card h3 {
+    font-size: .95rem;
+    color: var(--text-heading);
+    margin-bottom: 8px;
+    letter-spacing: 1px;
+}
+.global-card ul {
+    list-style: none;
+    padding: 0;
+}
+.global-card ul li {
+    padding: 4px 0;
+    font-size: .86rem;
+    color: var(--text-secondary);
+}
+.global-card ul li strong { color: var(--text-primary); }
+
+/* ═══ COMMANDER CARD ═══ */
+.cmdr-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-card);
+    border-radius: 10px;
+    padding: 0;
+    margin: 18px 0;
+    display: flex;
+    overflow: hidden;
+    transition: border-color .2s, box-shadow .2s;
+    box-shadow: var(--shadow-card);
+}
+.cmdr-card:hover {
+    border-color: rgba(224,112,64,.27);
+    box-shadow: 0 4px 24px rgba(0,0,0,.5);
+}
+.cmdr-card .cmdr-portrait {
+    flex-shrink: 0;
+    width: 200px;
+    min-height: 240px;
+    background-size: cover;
+    background-position: center top;
+    background-repeat: no-repeat;
+    position: relative;
+    border-right: 1px solid var(--border-subtle);
+}
+.cmdr-card .cmdr-portrait::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, transparent 50%, rgba(6,6,8,.7) 95%, var(--bg-card) 100%);
+}
+.cmdr-card .cmdr-body {
+    flex: 1;
+    padding: 20px 24px;
+    min-width: 0;
+}
+.cmdr-card .cmdr-body h4 {
+    font-size: 1.05rem;
+    color: var(--text-heading);
+    margin-bottom: 4px;
+    letter-spacing: 1px;
+}
+.cmdr-card .cmdr-body .cmdr-en {
+    font-size: .78rem;
+    color: var(--text-secondary);
+    font-weight: 400;
+    margin-left: 4px;
+}
+.cmdr-card .cmdr-body .change-list {
+    list-style: none;
+    padding: 0;
+    margin-top: 10px;
+}
+.cmdr-card .cmdr-body .change-list li {
+    padding: 5px 0;
+    font-size: .86rem;
+    color: var(--text-secondary);
+    line-height: 1.7;
+}
+.cmdr-card .cmdr-body .change-list li strong { color: var(--text-primary); }
+
+/* ═══ DESC BLOCK ═══ */
+.desc-block {
+    background: var(--bg-secondary);
+    border-left: 3px solid var(--accent-ptr);
+    padding: 14px 18px;
+    margin: 10px 0;
+    border-radius: 0 6px 6px 0;
+    font-size: .84rem;
+    color: var(--text-secondary);
+    line-height: 1.8;
+}
+.desc-block strong { color: var(--text-primary); }
+
+/* ═══ SUMMARY TABLE ═══ */
+.ptr-summary {
+    background: var(--bg-card);
+    border: 1px solid var(--border-card);
+    border-radius: 10px;
+    padding: 22px 26px;
+    margin: 18px 0;
+}
+.ptr-summary h3 {
+    font-size: .95rem;
+    color: var(--accent-ptr);
+    margin-bottom: 14px;
+    letter-spacing: 1px;
+}
+.ptr-summary-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: .85rem;
+}
+.ptr-summary-table thead th {
+    padding: 10px 14px;
+    text-align: left;
+    color: var(--accent-ptr);
+    font-weight: 600;
+    letter-spacing: 1px;
+    font-size: .76rem;
+    text-transform: uppercase;
+    border-bottom: 2px solid var(--border-subtle);
+}
+.ptr-summary-table tbody td {
+    padding: 8px 14px;
+    border-bottom: 1px solid rgba(255,255,255,.04);
+    color: var(--text-secondary);
+}
+.ptr-summary-table tbody tr:hover { background: rgba(224,112,64,.04); }
+.ptr-summary-table .cmdr-name { color: var(--text-primary); font-weight: 600; }
+
+/* ═══ FOOTER ═══ */
+.site-footer {
+    text-align: center;
+    padding: 36px 20px;
+    color: var(--text-secondary);
+    font-size: .76rem;
+    border-top: 1px solid var(--border-subtle);
+    margin-top: 40px;
+}
+.site-footer p { margin: 4px 0; }
+
+/* ═══ RESPONSIVE ═══ */
+@media (max-width: 720px) {
+    .hero h1 { font-size: 1.4rem; }
+    .cmdr-card { flex-direction: column; }
+    .cmdr-card .cmdr-portrait {
+        width: 100%; min-height: 180px; max-height: 240px;
+        border-right: none; border-bottom: 1px solid var(--border-subtle);
+    }
+    .container { padding: 0 14px; }
+}
+
+/* ═══ ANIMATIONS ═══ */
+.cmdr-card, .global-card, .ptr-summary {
+    animation: fadeUp .5s ease both;
+}
+@keyframes fadeUp {
+    from { opacity:0; transform:translateY(12px); }
+    to { opacity:1; transform:translateY(0); }
+}
+.cmdr-card:nth-child(1) { animation-delay: .05s; }
+.cmdr-card:nth-child(2) { animation-delay: .10s; }
+.cmdr-card:nth-child(3) { animation-delay: .15s; }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════ HERO ═══════════════ -->
+<header class="hero">
+    <span class="hero-badge">UPDATE · 更新</span>
+    <h1>风暴对决 · 平衡性改动<span class="sub">Storm Showdown — Co-op PVP Balance Update 2026.7.14</span></h1>
+    <div class="hero-version">星际争霸II 合作模式 PVP · 2026年7月14日</div>
+</header>
+
+<main class="container">
+
+<!-- ═══════════════ 备注 ═══════════════ -->
+<div class="note-block">
+    <h3>📋 阅读备注 · Notes</h3>
+    <p>以下改动基于社区测试反馈与录像数据分析制定，数值将根据实战表现持续迭代。</p>
+</div>
+
+<!-- ═══════════════ 概览 ═══════════════ -->
+<div class="ptr-summary">
+    <h3>本次更新涉及指挥官 · Affected Commanders</h3>
+    <table class="ptr-summary-table">
+    <thead>
+    <tr><th>指挥官</th><th>摘要</th></tr>
+    </thead>
+    <tbody>
+    <tr><td class="cmdr-name">通用</td><td>基地血量Buff调整、召唤物赏金移除、埋地Bug修复</td></tr>
+    <tr><td class="cmdr-name">阿拉纳克</td><td>死徒价格降低</td></tr>
+    <tr><td class="cmdr-name">斯托科夫</td><td>感染人类卡位修复、感染解放护甲Bug修复</td></tr>
+    <tr><td class="cmdr-name">德哈卡</td><td>破胆咆哮禁用能量对英雄生效修正</td></tr>
+    </tbody>
+    </table>
+</div>
+
+<!-- ═══════════════ SECTION: 通用改动 ═══════════════ -->
+<div class="section-divider">
+    <span class="line"></span><span class="icon">⚙</span><span class="line"></span>
+</div>
+<div class="section-header"><h2>通用改动 · General Changes</h2></div>
+
+<div class="global-card">
+    <h3>主基地 · Command Center / Hatchery / Nexus</h3>
+    <ul>
+        <li>主基地增加 <span class="old-val">50% 血量和护盾</span> <span class="arrow">→</span> <span class="new-val">固定 +500 生命</span></li>
+    </ul>
+</div>
+
+<div class="global-card">
+    <h3>经济机制 · 赏金系统</h3>
+    <ul>
+        <li>击杀带有<strong>召唤物标签</strong>的敌人不再增加赏金</li>
+    </ul>
+</div>
+
+<div class="global-card">
+    <h3>Bug 修复 · Bug Fix</h3>
+    <ul>
+        <li>修复了<strong>部分单位埋地</strong>的Bug</li>
+    </ul>
+</div>
+
+<!-- ═══════════════ SECTION: 指挥官改动 ═══════════════ -->
+<div class="section-divider">
+    <span class="line"></span><span class="icon">⚔</span><span class="line"></span>
+</div>
+<div class="section-header"><h2>指挥官平衡性改动 · Commander Changes</h2></div>
+
+<!-- ─── 阿拉纳克 ─── -->
+<div class="cmdr-card">
+    <div class="cmdr-portrait" style="background-image:url('https://raw.githubusercontent.com/fantasyDeaddream/storm-showdown-assets/main/Commander_Figures/Ui_loading_coop_hero_alarak.png')"></div>
+    <div class="cmdr-body">
+        <h4>阿拉纳克 <span class="cmdr-en">Alarak</span></h4>
+        <ul class="change-list">
+            <li>死徒价格：<span class="old-val">110</span> <span class="arrow">→</span> <span class="new-val">90</span></li>
+        </ul>
+    </div>
+</div>
+
+<!-- ─── 斯托科夫 ─── -->
+<div class="cmdr-card">
+    <div class="cmdr-portrait" style="background-image:url('https://raw.githubusercontent.com/fantasyDeaddream/storm-showdown-assets/main/Commander_Figures/Ui_loading_coop_hero_stukov.png')"></div>
+    <div class="cmdr-body">
+        <h4>斯托科夫 <span class="cmdr-en">Stukov</span></h4>
+        <ul class="change-list">
+            <li>修复<strong>被感染的人类</strong>系列单位卡位问题</li>
+            <li>修复<strong>被感染的解放者</strong>普攻双倍吃护甲的Bug</li>
+        </ul>
+    </div>
+</div>
+
+<!-- ─── 德哈卡 ─── -->
+<div class="cmdr-card">
+    <div class="cmdr-portrait" style="background-image:url('https://raw.githubusercontent.com/fantasyDeaddream/storm-showdown-assets/main/Commander_Figures/Ui_loading_coop_hero_dehaka.png')"></div>
+    <div class="cmdr-body">
+        <h4>德哈卡 <span class="cmdr-en">Dehaka</span></h4>
+        <ul class="change-list">
+            <li><strong>破胆咆哮（W）</strong>禁用能量——对<strong>英雄单位</strong>无效</li>
+        </ul>
+    </div>
+</div>
+
+</main>
+
+<footer class="site-footer">
+    <p>风暴对决 · Storm Showdown — 星际争霸II 合作模式 PVP 社区平衡项目</p>
+    <p style="opacity:.5">StarCraft® II and all related trademarks are the property of Blizzard Entertainment, Inc. This is a fan-made community balance project.</p>
+    <p style="opacity:.4;margin-top:8px;">—— 2026.7.14 ——</p>
+</footer>
+
+</body>
+</html>

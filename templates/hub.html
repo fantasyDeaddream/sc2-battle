@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<section class="dashboard-hero ladder-hero">
+    <div>
+        <p class="eyebrow">Mode Select</p>
+        <h1>选择你的入口</h1>
+        <p class="muted-copy">赛事大厅与天梯匹配共用同一套账号体系，但各自保持独立流程。你可以从这里进入想要的玩法。</p>
+    </div>
+    <div class="hero-actions">
+        {% if current_user.tournament_points %}
+            <span class="status-badge success">赛事积分：{{ current_user.tournament_points }}</span>
+        {% endif %}
+        <a class="ghost-button" href="/leaderboard">积分排行榜</a>
+        <a class="ghost-button" href="/tools/replay">测试 replay 读取</a>
+        <a class="ghost-button" href="/account/settings">账户设置与装扮</a>
+    </div>
+</section>
+
+<section class="card-grid hub-grid">
+    <article class="surface-card nested-card hub-card">
+        <p class="eyebrow">赛事大厅</p>
+        <h2>管理赛事、报名参赛、查看对阵</h2>
+        <p class="muted-copy">保留当前完整的赛事创建、签到、对阵、BP、replay 判定与管理员能力。</p>
+        <div class="hero-actions compact-actions">
+            <a class="primary-button" href="/dashboard">进入赛事大厅</a>
+        </div>
+    </article>
+    <article class="surface-card nested-card hub-card hub-card-accent">
+        <p class="eyebrow">天梯匹配</p>
+        <h2>进入 1v1 / 2v2 天梯、实时匹配并上传 replay 结算</h2>
+        <p class="muted-copy">网页版天梯会复用当前账号、昵称绑定与 replay 解析能力，但与赛事系统使用独立数据和独立界面。</p>
+        <div class="hero-actions compact-actions">
+            <a class="primary-button" href="/ladder">进入天梯匹配</a>
+        </div>
+    </article>
+</section>
+{% endblock %}

@@ -1,0 +1,277 @@
+{% extends 'base.html' %}
+
+{% block content %}
+{% if ladder_sync %}
+    <div
+        class="bp-sync-root"
+        data-bp-sync-url="{{ ladder_sync.url }}"
+        data-bp-sync-key="{{ ladder_sync.key }}"
+        data-bp-sync-interval="{{ ladder_sync.interval_ms }}"
+        data-bp-partial-url="/ladder/partial"
+        data-bp-partial-target="ladder-match-panel"
+        data-ladder-live="true"
+        data-ladder-current-match-id="{{ ladder_match.id if ladder_match else '' }}"
+        data-ladder-current-match-state="{{ ladder_match.state if ladder_match else '' }}"
+    ></div>
+{% endif %}
+
+<section class="dashboard-hero ladder-hero">
+    <div>
+        <p class="eyebrow">Icelin Ladder</p>
+        <h1>天梯匹配</h1>
+        <p class="muted-copy">从这里进入 1v1 / 2v2 天梯队列、完成 BP，并通过 replay 自动结算分数。</p>
+    </div>
+    <div class="hero-actions">
+        <a class="ghost-button {% if ladder_mode == '1v1' %}is-active-filter{% endif %}" href="/ladder?mode=1v1">1v1</a>
+        <a class="ghost-button {% if ladder_mode == '2v2' %}is-active-filter{% endif %}" href="/ladder?mode=2v2">2v2</a>
+        <a class="ghost-button" href="/ladder/bounties">天梯悬赏</a>
+        <a class="ghost-button" href="/tools/replay">测试 replay 读取</a>
+        <a class="ghost-button" href="/account/settings">账户设置与装扮</a>
+    </div>
+</section>
+
+{% if ladder_error %}
+    <div class="alert alert-error">{{ ladder_error }}</div>
+{% endif %}
+{% if ladder_success %}
+    <div class="alert alert-success">{{ ladder_success }}</div>
+{% endif %}
+{% if ladder_replay_error %}
+    <div class="alert alert-error">{{ ladder_replay_error }}</div>
+{% endif %}
+{% if ladder_replay_success %}
+    <div class="alert alert-success">{{ ladder_replay_success }}</div>
+{% endif %}
+<div class="alert alert-error" data-ladder-expired-alert hidden>本次匹配已失效</div>
+
+<section class="card-grid ladder-grid">
+    <article class="surface-card nested-card ladder-card">
+        <p class="eyebrow">大厅状态</p>
+        <h2>天梯在线与活动</h2>
+        <div class="ladder-live-grid">
+            <div class="ladder-live-stat">
+                <strong data-ladder-online-count>{{ ladder_lobby.online_count }}</strong>
+                <span>当前在线</span>
+            </div>
+            <div class="ladder-live-stat">
+                <strong data-ladder-queue-1v1>{{ ladder_lobby.queue_1v1_players }}</strong>
+                <span>1v1 匹配中</span>
+            </div>
+            <div class="ladder-live-stat">
+                <strong data-ladder-queue-2v2>{{ ladder_lobby.queue_2v2_players }}</strong>
+                <span>2v2 匹配中</span>
+            </div>
+            <div class="ladder-live-stat">
+                <strong data-ladder-active-matches>{{ ladder_lobby.active_matches }}</strong>
+                <span>活动比赛</span>
+            </div>
+        </div>
+        <p class="meta-text">只有当前停留在天梯页面的用户才会计入天梯在线，不会把赛事大厅或其他页面的用户混进来。</p>
+        <div class="ladder-online-list" data-ladder-online-list>
+            {% for entry in ladder_lobby.online_users %}
+                <article class="ladder-online-entry">
+                    <div class="ladder-online-meta">
+                        <strong>{% if entry.game_nickname %}{{ entry.game_nickname }}{% else %}{{ entry.username }}{% endif %}</strong>
+                        <span>{% if entry.game_nickname %}{{ entry.username }}{% else %}未绑定游戏昵称{% endif %}</span>
+                    </div>
+                    <span class="status-badge">{{ entry.status_label }}</span>
+                </article>
+            {% else %}
+                <p class="muted-copy">当前还没有停留在天梯页面的在线用户。</p>
+            {% endfor %}
+        </div>
+    </article>
+
+    <article class="surface-card nested-card ladder-card">
+        <p class="eyebrow">账号信息</p>
+        <h2>{% if current_user_game_nickname %}{{ current_user_game_nickname }}{% else %}{{ current_user.username }}{% endif %}</h2>
+        <div class="info-pairs compact">
+            <div>
+                <dt>1v1 天梯分</dt>
+                <dd>{{ '%.2f'|format(ladder_profile.rating_1v1) }}</dd>
+            </div>
+            <div>
+                <dt>1v1 局数</dt>
+                <dd>{{ ladder_profile.games_1v1 }}</dd>
+            </div>
+        </div>
+        <div class="ladder-pair-list">
+            <p class="meta-text">我的 2v2 组合分</p>
+            {% for entry in ladder_profile.pair_cards %}
+                <div class="ladder-pair-row">
+                    <strong>{{ entry.pair_name }}</strong>
+                    <span>{{ '%.2f'|format(entry.rating) }} / {{ entry.games }} 局</span>
+                </div>
+            {% else %}
+                <p class="muted-copy">还没有 2v2 组合分记录。</p>
+            {% endfor %}
+        </div>
+    </article>
+
+    {% if is_superadmin %}
+        <article class="surface-card nested-card ladder-card ladder-queue-card">
+            <p class="eyebrow">sudo 配置</p>
+            <h2>网页天梯 BP 时长</h2>
+            <p class="meta-text">当前全局每轮 BP 等待上限为 {{ ladder_bp_seconds }} 秒。修改后会立即刷新当前处于网页天梯 BP 阶段比赛的截止时间。</p>
+            <form method="post" action="/ladder/settings/bp-seconds" class="stack-form">
+                <input type="hidden" name="mode" value="{{ ladder_mode }}">
+                <label>
+                    <span>新的 BP 时长上限</span>
+                    <input name="bp_seconds" type="number" min="{{ ladder_bp_seconds_min }}" max="{{ ladder_bp_seconds_max }}" value="{{ ladder_bp_seconds }}" required>
+                </label>
+                <button class="primary-button" type="submit">更新网页天梯 BP 时长</button>
+            </form>
+        </article>
+    {% endif %}
+
+    {% include '_ladder_match_panel.html' %}
+</section>
+
+<aside class="surface-card nested-card ladder-chat-dock" data-ladder-chat-dock data-default-chat-panel="{{ 'match' if ladder_chat else 'lobby' }}">
+    <div class="ladder-chat-dock-head">
+        <div>
+            <p class="eyebrow">Ladder Chat</p>
+            <h2>聊天浮窗</h2>
+        </div>
+        <div class="ladder-chat-dock-actions">
+            <span class="ladder-unread-badge" data-ladder-total-unread hidden>0</span>
+            <button class="ghost-button ladder-chat-toggle" type="button" data-ladder-chat-toggle>
+                <span data-ladder-chat-toggle-label>收起</span>
+            </button>
+        </div>
+    </div>
+    <div class="ladder-chat-tabs">
+        <button class="ghost-button ladder-chat-tab" type="button" data-ladder-chat-tab="lobby">
+            聊天大厅
+            <span class="ladder-unread-badge" data-ladder-unread-badge="lobby" hidden>0</span>
+        </button>
+        <button class="ghost-button ladder-chat-tab" type="button" data-ladder-chat-tab="match" {% if not ladder_chat %}disabled{% endif %}>
+            临时聊天室
+            <span class="ladder-unread-badge" data-ladder-unread-badge="match" hidden>0</span>
+        </button>
+        </div>
+
+    <section class="ladder-chat-panel" data-ladder-chat-panel="lobby" data-ladder-lobby-chat-root>
+        <p class="meta-text">所有当前停留在天梯页面的用户都可以看到这里的消息。</p>
+        <div class="ladder-chat-log" data-ladder-chat-list>
+            {% for message in ladder_lobby_chat.messages %}
+                <article class="ladder-chat-entry">
+                    <div class="ladder-chat-meta">
+                        <strong>{{ message.sender }}</strong>
+                        <span>{{ message.time }}</span>
+                    </div>
+                    <p>{{ message.text }}</p>
+                </article>
+            {% else %}
+                <p class="muted-copy" data-ladder-chat-empty>大厅公共频道暂时还没有聊天消息。</p>
+            {% endfor %}
+        </div>
+        <form method="post" action="/ladder/chat/lobby" class="stack-form">
+            <input type="hidden" name="mode" value="{{ ladder_mode }}">
+            <label>
+                <span>发送到聊天大厅</span>
+                <input name="text" type="text" maxlength="200" placeholder="发送给所有 ladder 在线用户" required>
+            </label>
+            <button class="primary-button" type="submit">发送大厅消息</button>
+        </form>
+    </section>
+
+    <section class="ladder-chat-panel" data-ladder-chat-panel="match" data-ladder-chat-root data-match-id="{{ ladder_chat.match_id if ladder_chat else '' }}">
+        {% if ladder_chat %}
+            <p class="meta-text">只有当前比赛中的选手可以看到并发送消息。</p>
+            <div class="ladder-chat-log" data-ladder-chat-list>
+                {% for message in ladder_chat.messages %}
+                    <article class="ladder-chat-entry">
+                        <div class="ladder-chat-meta">
+                            <strong>{{ message.sender }}</strong>
+                            <span>{{ message.time }}</span>
+                        </div>
+                        <p>{{ message.text }}</p>
+                    </article>
+                {% else %}
+                    <p class="muted-copy" data-ladder-chat-empty>暂时还没有聊天消息。</p>
+                {% endfor %}
+            </div>
+            <form method="post" action="/ladder/matches/{{ ladder_chat.match_id }}/chat" class="stack-form">
+                <input type="hidden" name="mode" value="{{ ladder_mode }}">
+                <label>
+                    <span>发送到临时聊天室</span>
+                    <input name="text" type="text" maxlength="200" placeholder="发送给本场比赛所有选手" required>
+                </label>
+                <button class="primary-button" type="submit">发送</button>
+            </form>
+        {% else %}
+            <p class="muted-copy">当前没有正在进行的比赛，匹配成功后这里会自动切换到本场比赛的临时聊天室。</p>
+        {% endif %}
+    </section>
+</aside>
+
+<section class="surface-card nested-card ladder-rank-shell" data-ladder-board-root data-default-ladder-board="">
+    <div class="ladder-rank-head">
+        <div>
+            <p class="eyebrow">排行榜</p>
+            <h2>按需查看天梯排行</h2>
+            <p class="meta-text">点击下方按键展开对应榜单，避免页面默认拉得过长。</p>
+        </div>
+        <div class="ladder-rank-tabs">
+            <button class="ghost-button ladder-rank-tab" type="button" data-ladder-board-button="1v1">1v1 排行榜</button>
+            <button class="ghost-button ladder-rank-tab" type="button" data-ladder-board-button="2v2">2v2 排行榜</button>
+        </div>
+    </div>
+    <p class="muted-copy ladder-rank-placeholder" data-ladder-board-empty>点击按钮查看对应排行榜。</p>
+
+    <section class="ladder-rank-panel" data-ladder-board-panel="1v1">
+        <div class="table-scroll">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>玩家</th>
+                        <th>分数</th>
+                        <th>局数</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in ladder_leaderboard_1v1 %}
+                        <tr>
+                            <td>{{ loop.index }}</td>
+                            <td>{% if row.game_nickname %}{{ row.game_nickname }}{% else %}{{ row.username }}{% endif %}</td>
+                            <td>{{ '%.2f'|format(row.rating) }}</td>
+                            <td>{{ row.games }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section class="ladder-rank-panel" data-ladder-board-panel="2v2">
+        <div class="table-scroll">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>组合</th>
+                        <th>分数</th>
+                        <th>局数</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in ladder_leaderboard_2v2 %}
+                        <tr>
+                            <td>{{ loop.index }}</td>
+                            <td>{{ row.pair_name }}</td>
+                            <td>{{ '%.2f'|format(row.rating) }}</td>
+                            <td>{{ row.games }}</td>
+                        </tr>
+                    {% else %}
+                        <tr>
+                            <td colspan="4">还没有 2v2 组合分记录。</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+</section>
+{% endblock %}

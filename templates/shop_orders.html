@@ -1,0 +1,83 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<section class="dashboard-hero">
+    <div>
+        <p class="eyebrow">积分商城</p>
+        <h1>订单管理</h1>
+    </div>
+    <div class="hero-actions">
+        <a class="ghost-button" href="/shop">返回商城</a>
+    </div>
+</section>
+
+{% if not shop_orders %}
+<p class="muted-copy">暂无订单。</p>
+{% else %}
+<div style="display:flex;gap:8px;margin-bottom:12px;">
+    <button class="primary-button" type="button" onclick="submitBulkShopOrders('/shop/orders/download')">下载选中订单 (xlsx)</button>
+    <button class="ghost-button" type="button" onclick="submitBulkShopOrders('/shop/orders/uncomplete')">恢复选中为未下载</button>
+</div>
+<div class="table-scroll">
+    <table class="data-table">
+        <thead>
+            <tr><th>选</th><th>ID</th><th>物品</th><th>积分</th><th>用户</th><th>收货人</th><th>手机</th><th>地址</th><th>状态</th><th>时间</th><th>操作</th></tr>
+        </thead>
+        <tbody>
+            {% for o in shop_orders %}
+            <tr>
+                <td><input type="checkbox" class="shop-order-check" name="order_{{ o.id }}" value="1" {% if o.status == 'accepted' and not o.downloaded %}checked{% endif %}></td>
+                <td>{{ o.id }}</td>
+                <td>{{ o.item_name }}</td>
+                <td>{{ o.item_points }}</td>
+                <td>{{ o.game_nickname or o.username }}</td>
+                <td>{{ o.recipient_name or '-' }}</td>
+                <td>{{ o.phone or '-' }}</td>
+                <td>{{ o.address or '-' }}</td>
+                <td>
+                    {% if o.status == 'pending' %}<span class="status-badge">待处理</span>
+                    {% elif o.status == 'accepted' %}<span class="status-badge success">已接受{% if o.downloaded %} · 已下载{% endif %}</span>
+                    {% elif o.status == 'revoked' %}<span class="status-badge danger">已撤销</span>
+                    {% endif %}
+                </td>
+                <td>{{ o.created_at or '-' }}</td>
+                <td>
+                    <div class="hero-actions compact-actions">
+                        {% if o.status == 'pending' %}
+                            <form method="post" action="/shop/orders/{{ o.id }}/accept" style="display:inline;"><button class="ghost-button" type="submit">接受</button></form>
+                        {% endif %}
+                        {% if o.status != 'revoked' %}
+                            <form method="post" action="/shop/orders/{{ o.id }}/revoke" style="display:inline;"><button class="ghost-button danger" type="submit">撤销</button></form>
+                        {% endif %}
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<script>
+function submitBulkShopOrders(actionUrl) {
+    var form = document.createElement('form');
+    form.method = 'post';
+    form.action = actionUrl;
+    form.style.display = 'none';
+    var checkboxes = document.querySelectorAll('.shop-order-check:checked');
+    if (checkboxes.length === 0) {
+        alert('请至少选中一个订单。');
+        return;
+    }
+    checkboxes.forEach(function(cb) {
+        var input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = cb.name;
+        input.value = '1';
+        form.appendChild(input);
+    });
+    document.body.appendChild(form);
+    form.submit();
+}
+</script>
+{% endif %}
+{% endblock %}

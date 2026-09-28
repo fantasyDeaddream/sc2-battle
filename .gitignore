@@ -1,0 +1,61 @@
+# ── Python ──
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.venv/
+venv/
+env/
+.Python
+
+# ── 密钥与环境变量（重要：绝不提交 .env）──
+.env
+.env.local
+*.pem
+*.key
+
+# ── 数据库与运行时数据 ──
+contest.db
+contest.db-*
+contest.db-journal
+*.sqlite
+*.sqlite3
+
+# ── 用户上传/运行期数据 ──
+avatars/
+ReplaySave/
+rank/
+ladder_project/server_data/
+static/shop_images/
+
+# ── 收款码（个人隐私，请自行放置）──
+payment/
+
+# ── 测试文件与测试产物 ──
+tests/
+.pytest_cache/
+.pytest_*
+pytest_*.log
+pytest_*.xml
+*.log
+
+# ── 临时检查产物 ──
+.sc2reader_check.txt
+.sc2reader_version.txt
+
+# ── 构建产物 ──
+ladder_project/build/
+ladder_project/dist/
+*.spec.bak
+build/
+dist/
+
+# ── IDE / 编辑器 ──
+.idea/
+.vscode/
+*.swp
+
+# ── 操作系统 ──
+.DS_Store
+Thumbs.db
+desktop.ini

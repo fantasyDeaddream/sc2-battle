@@ -1,0 +1,101 @@
+{% extends 'base.html' %}
+{% import '_commander_macros.html' as commander_ui with context %}
+
+{% block content %}
+<section class="bp-replay-shell">
+    <aside class="surface-card bp-replay-sidebar">
+        <p class="eyebrow">主播控制台</p>
+        <h1>BP 回放控制台</h1>
+        <p class="muted-copy">以逐帧时间线的方式回看任意一场比赛的 BP 过程。页面会直接读取 preparation 持久化记录，不依赖 replay 文件本身。</p>
+        <form method="get" action="/streamer/bp-replays" class="stack-form">
+            <label>
+                <span>选择比赛</span>
+                <select name="match_id" onchange="this.form.elements.game_number.value=''">
+                    {% for option in replay_match_options %}
+                        <option value="{{ option.match_id }}" {% if option.match_id == selected_match_id %}selected{% endif %}>{{ option.tournament_name }} · {{ option.series_label }} · {{ option.bp_mode_label }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            {% if selected_best_of > 0 %}
+            <label>
+                <span>选择小局（始终显示打满选项以防剧透）</span>
+                <select name="game_number">
+                    <option value="" {% if not selected_game_number %}selected{% endif %}>完整回放（全部小局）</option>
+                    {% for n in range(1, selected_best_of + 1) %}
+                        <option value="{{ n }}" {% if selected_game_number == n %}selected{% endif %}>第 {{ n }} 局</option>
+                    {% endfor %}
+                </select>
+            </label>
+            {% endif %}
+            <button class="primary-button" type="submit">载入 BP 回放</button>
+        </form>
+
+    </aside>
+
+    <div class="bp-replay-stage-group">
+        {% if bp_replay_payload %}
+            <article class="surface-card bp-replay-stage" data-bp-replay-root>
+                <script type="application/json" data-bp-replay-payload>{{ bp_replay_payload_json|safe }}</script>
+                <div class="bp-replay-stage-head">
+                    <div>
+                        <p class="eyebrow">{{ bp_replay_payload.bp_mode_label }}</p>
+                        <h2>{{ bp_replay_payload.tournament_name }}</h2>
+                    </div>
+                    <div class="bp-replay-scoreline">
+                        <strong>{{ bp_replay_payload.player1_name }}</strong>
+                        <span>{{ bp_replay_payload.series_label }}</span>
+                        <strong>{{ bp_replay_payload.player2_name }}</strong>
+                    </div>
+                </div>
+                <div class="bp-replay-canvas">
+                    <div class="bp-replay-art" data-bp-replay-art hidden></div>
+                    <div class="bp-replay-copy">
+                        <p class="eyebrow" data-bp-replay-index>步骤 1</p>
+                        <h3 data-bp-replay-title></h3>
+                        <p class="meta-text" data-bp-replay-map hidden></p>
+                        <p class="muted-copy" data-bp-replay-detail></p>
+                        <div class="bp-replay-summary" data-bp-replay-summary hidden></div>
+                        <div class="tag-list prep-tag-list bp-replay-meta-row">
+                            <span class="status-badge" data-bp-replay-side hidden></span>
+                            <span class="status-badge success" data-bp-replay-winner hidden></span>
+                            <span class="status-badge" data-bp-replay-commander hidden></span>
+                        </div>
+                    </div>
+                </div>
+                <div class="hero-actions compact-actions bp-replay-controls">
+                    <button class="ghost-button" type="button" data-bp-replay-action="prev">上一帧</button>
+                    <button class="primary-button" type="button" data-bp-replay-action="play">自动播放</button>
+                    <button class="ghost-button" type="button" data-bp-replay-action="next">下一帧</button>
+                </div>
+                <div class="bp-replay-timeline" data-bp-replay-timeline></div>
+            </article>
+
+            <article class="surface-card bp-replay-support-card">
+                <p class="eyebrow">图片资源</p>
+                {% set showcase_frame = bp_replay_payload.frames|selectattr('commander_name')|list|first %}
+                {% if showcase_frame and showcase_frame.commander_name %}
+                    {{ commander_ui.commander_showcase(showcase_frame.commander_name, '当前回放首个指挥官镜头', bp_replay_payload.bp_mode_label) }}
+                {% else %}
+                    <p class="muted-copy">当前这场 BP 没有指挥官帧，或尚未配置图片资源。</p>
+                {% endif %}
+                <div class="tag-list prep-tag-list">
+                    <span class="status-badge">总帧数 {{ bp_replay_payload.frames|length }}</span>
+                    <span class="status-badge">模式 {{ bp_replay_payload.bp_mode_label }}</span>
+                </div>
+            </article>
+        {% elif replay_match_options %}
+            <article class="surface-card empty-card">
+                <p class="eyebrow">等待载入</p>
+                <h2>请选择一场比赛查看 BP 回放</h2>
+                <p class="muted-copy">左侧列表会自动展示已有 preparation 状态记录的比赛。</p>
+            </article>
+        {% else %}
+            <article class="surface-card empty-card">
+                <p class="eyebrow">暂无数据</p>
+                <h2>当前还没有可回看的 BP 记录</h2>
+                <p class="muted-copy">先完成一场带 BP 的比赛，系统把 state_json 持久化下来后，这里就会出现回放入口。</p>
+            </article>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}
